@@ -172,51 +172,23 @@ class WorldGenMod : GenericMod {
 	/* Function hook that gets called when a Zone is generated.
 	*/
 	virtual void OnZoneGenerated(cube::Zone* zone) override {
-		/*vec2 loc;
-		loc.x = zone->position.x;
-		loc.y = zone->position.y;
-
-		if (wtfset->find(loc) != wtfset->end()) {
-			cube::GetGame()->PrintMessage(L"Wtf");
-		} else {
-			wtfset->insert(loc);
-		}*/
 		cubewg::WorldRegion region = cubewg::WorldRegion(zone);
 
-		int base_z = zone->fields->base_z;
 		cube::Block* blocc;
 		bool hadblocc = false;
 
-		for (int zo = 0; zo < 64; zo++) {
-			blocc = region.GetBlock(LongVector3(32, 32, base_z + zo));
+		int gen_z = region.GetHeight(LongVector2(32, 32), true);
 
-			if (blocc) {
-				hadblocc = true;
+		if (gen_z != cubewg::kNoPosition) {
+			std::set<cube::Zone*> to_remesh;
 
-				if (blocc->type == cube::Block::Air) {
-					std::set<cube::Zone*> to_remesh;
+			GenerateTree(region, 32, 32, gen_z, to_remesh);
 
-					GenerateTree(region, 32, 32, base_z + zo, to_remesh);
+			//std::wstring w = std::to_wstring(to_remesh.size()) + LF;
+			//cube::GetGame()->PrintMessage((L"Remeshing N Chunks due to Natural Tree Gen: " + w).c_str());
 
-					//std::wstring w = std::to_wstring(to_remesh.size()) + LF;
-					//cube::GetGame()->PrintMessage((L"Remeshing N Chunks due to Natural Tree Gen: " + w).c_str());
-						
-					for (cube::Zone* zone : to_remesh) {
-						zone->chunk.Remesh();
-					}
-
-					break;
-				}
-			} else if (hadblocc) {
-				std::set<cube::Zone*> to_remesh;
-
-				GenerateTree(region, 32, 32, base_z + zo, to_remesh);
-
-				for (cube::Zone* zone : to_remesh) {
-					zone->chunk.Remesh();
-				}
-
-				break;
+			for (cube::Zone* zone : to_remesh) {
+				zone->chunk.Remesh();
 			}
 		}
 	}
