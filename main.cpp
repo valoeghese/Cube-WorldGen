@@ -2,36 +2,8 @@
 
 #define LF L"\n";
 
-/*
-typedef struct {
-	int x;
-	int y;
-} vec2;
+// Globals go here
 
-bool operator==(const vec2& lhs, const vec2& rhs) {
-	return lhs.x == rhs.x && lhs.y == rhs.y;
-}
-
-bool operator<(const vec2& lhs, const vec2& rhs) {
-	return lhs.x < rhs.x || lhs.y < rhs.y;
-}
-
-bool operator>(const vec2& lhs, const vec2& rhs) {
-	return lhs.x > rhs.x || lhs.y > rhs.y;
-}
-
-// The specialized hash function for `unordered_map` keys
-struct vec2_hash_fn {
-	std::size_t operator() (const vec2& node) const {
-		std::size_t h1 = std::hash<int>()(node.x);
-		std::size_t h2 = std::hash<int>()(node.y);
-
-		return h1 ^ h2;
-	}
-};
-*/
-
-//std::set<vec2>* wtfset;
 
 // Includes for the self written hooks.
 // For example: #include "src/hooks/a_hook.h" 
@@ -91,7 +63,7 @@ class WorldGenMod : GenericMod {
 	 * @return	{int}
 	*/
 	virtual int OnChat(std::wstring* message) override {
-		if (*message == std::wstring(L"gentree")) {
+		if (*message == L".gentree") {
 			try {
 				LongVector3 playerPos = BlockFromDots(cube::GetGame()->GetPlayer()->entity_data.position);
 				std::set<cube::Zone*> chunks_to_remesh;
@@ -100,7 +72,7 @@ class WorldGenMod : GenericMod {
 
 				GenerateTree(region, playerPos.x, playerPos.y, playerPos.z, chunks_to_remesh);
 
-				std::wstring w = std::to_wstring(chunks_to_remesh.size());
+				std::wstring w = std::to_wstring(chunks_to_remesh.size()) + LF;
 				cube::GetGame()->PrintMessage((L"Remeshing N Chunks: " + w).c_str());
 				
 				std::set<cube::Zone*>::iterator itr;
@@ -121,6 +93,61 @@ class WorldGenMod : GenericMod {
 				std::wstring ws(s.begin(), s.end());
 				cube::GetGame()->PrintMessage(ws.c_str());
 			}
+		} else if (*message == L".airz") {
+			// get the zone the player is in
+			cube::Zone* zone = cube::GetGame()->world->GetCurrentZone();
+
+			if (zone) {
+				cube::Creature* player = cube::GetGame()->GetPlayer();
+				LongVector3 position = BlockFromDots(player->entity_data.position);
+
+				int base_z = zone->fields->base_z;
+				// get the x and y within the zone.
+				int player_x = pymod(position.x, cube::BLOCKS_PER_ZONE);
+				int player_y = pymod(position.y, cube::BLOCKS_PER_ZONE);
+
+				cube::Block* blocc;
+
+				for (int zo = 0; zo < 64; zo++) {
+					// search for air
+					blocc = zone->GetBlock(IntVector3(player_x, player_y, base_z + zo));
+
+					if (blocc) {
+						if (blocc->type == cube::Block::Air) {
+							std::wstring message = L"Air found at " + std::to_wstring(base_z + zo) + L" (base z is " + std::to_wstring(zone->fields->base_z) + L")" + LF;
+							cube::GetGame()->PrintMessage(message.c_str());
+							return 1;
+						}
+					}
+				}
+
+				cube::GetGame()->PrintMessage(L"No air found in current column.\n");
+			} else {
+				cube::GetGame()->PrintMessage(L"Lol what zone?");
+			}
+
+			return 1;
+		} else if (*message == L".pos") {
+			cube::Creature* player = cube::GetGame()->GetPlayer();
+			LongVector3 position = BlockFromDots(player->entity_data.position);
+
+			std::wstring message = L"Player Block Position is " + std::to_wstring(position.x) + L", " + std::to_wstring(position.y) + L", " + std::to_wstring(position.z) + LF;
+			cube::GetGame()->PrintMessage(message.c_str());
+			
+			message = L"Player Block-In-Zone Position is " + std::to_wstring(pymod(position.x, cube::BLOCKS_PER_ZONE)) + L", " + std::to_wstring(pymod(position.y, cube::BLOCKS_PER_ZONE)) + LF;
+			cube::GetGame()->PrintMessage(message.c_str());
+
+			cube::Block* blocc = cube::GetGame()->world->GetBlock(position);
+
+			if (blocc) {
+				message = L"Block at this position is type " + std::to_wstring(blocc->type) + LF;
+			} else {
+				message = L"No Block is at this position.";
+			}
+
+			cube::GetGame()->PrintMessage(message.c_str());
+
+			return 1;
 		}
 		return 0;
 	}
@@ -130,16 +157,6 @@ class WorldGenMod : GenericMod {
 	 * @return	{void}
 	*/
 	virtual void OnGameTick(cube::Game* game) override {
-		/*cube::Zone* zone = game->world->GetCurrentZone();
-
-		if (game->GetPlayer() && game->world && zone) {
-			//cube::Creature* player = game->GetPlayer();
-			//LongVector3 position = BlockFromDots(player->entity_data.position);
-
-			//std::wstring message = L"Player Block Position is " + std::to_wstring(position.x) + L", " + std::to_wstring(position.y) + L", " + std::to_wstring(position.z) + L"\n";
-			std::wstring message = L"Base Zone Position is " + std::to_wstring(zone->fields->base_z) + L"\n";
-			game->PrintMessage(message.c_str());
-		}*/
 		return;
 	}
 
@@ -168,18 +185,21 @@ class WorldGenMod : GenericMod {
 
 		int base_z = zone->fields->base_z;
 		cube::Block* blocc;
+		bool hadblocc = false;
 
 		for (int zo = 0; zo < 64; zo++) {
 			blocc = region.GetBlock(LongVector3(32, 32, base_z + zo));
 
 			if (blocc) {
+				hadblocc = true;
+
 				if (blocc->type == cube::Block::Air) {
 					std::set<cube::Zone*> to_remesh;
 
 					GenerateTree(region, 32, 32, base_z + zo, to_remesh);
 
-					std::wstring w = std::to_wstring(to_remesh.size()) + LF;
-					cube::GetGame()->PrintMessage((L"Remeshing N Chunks due to Natural Tree Gen: " + w).c_str());
+					//std::wstring w = std::to_wstring(to_remesh.size()) + LF;
+					//cube::GetGame()->PrintMessage((L"Remeshing N Chunks due to Natural Tree Gen: " + w).c_str());
 						
 					for (cube::Zone* zone : to_remesh) {
 						zone->chunk.Remesh();
@@ -187,6 +207,16 @@ class WorldGenMod : GenericMod {
 
 					break;
 				}
+			} else if (hadblocc) {
+				std::set<cube::Zone*> to_remesh;
+
+				GenerateTree(region, 32, 32, base_z + zo, to_remesh);
+
+				for (cube::Zone* zone : to_remesh) {
+					zone->chunk.Remesh();
+				}
+
+				break;
 			}
 		}
 	}
