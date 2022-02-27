@@ -9,8 +9,9 @@
 #include <fstream>
 #include <sstream>
 #include <map>
-#include <unordered_map>
+
 #include <set>
+#include <list>
 
 #include <windows.h>
 #include "CWSDK/cwsdk.h"

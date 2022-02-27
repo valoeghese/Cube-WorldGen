@@ -1,22 +1,28 @@
-#include <set>
-#include <optional>
+#pragma once
 
 #include "CWSDK/cwsdk.h"
 
 namespace cubewg {
+	// consts
 	const int kNoPosition = -32768;
 
+	/* Abstraction between zones and worlds with some additional useful utilities. Zonal world generation hooks into zone buffers.
+	*/
 	class WorldRegion {
 	private:
 		cube::World* world;
 		cube::Zone* zone;
 
 	public:
+		/* Generation for runtime/tests using world.
+		*/
 		WorldRegion(cube::World* world) {
 			this->world = world;
 			this->zone = nullptr;
 		}
 
+		/* Generation for worldgen using zone/buffers
+		*/
 		WorldRegion(cube::Zone* zone) {
 			this->world = nullptr;
 			this->zone = zone;
@@ -31,5 +37,8 @@ namespace cubewg {
 		cube::Block* GetBlock(LongVector3 block_pos);
 
 		void SetBlock(LongVector3 block_pos, int r, int g, int b, cube::Block::Type type, std::set<cube::Zone*>& to_remesh);
+
+		// static methods
+		static void Initialise();
 	};
 }
