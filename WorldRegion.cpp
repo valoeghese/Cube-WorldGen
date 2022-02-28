@@ -2,9 +2,26 @@
 
 #include <map>
 
+namespace std {
+	template <>
+	struct hash<Vector3<int>> {
+		std::size_t operator()(const Vector3<int>& k) const {
+			uint64_t x = (uint32_t)k.x;
+			uint64_t y = (uint32_t)k.y;
+			uint64_t vec2key = x | (y << 32);
+
+			uint64_t z = (uint32_t)k.z;
+			vec2key = vec2key * 31L + z;
+
+			// Call into the MSVC-STL FNV-1a std::hash function.
+			return std::hash<uint64_t>()(vec2key);
+		}
+	};
+}
+
 namespace cubewg {
 	typedef struct {
-		std::map<IntVector3, cube::Block>* to_paste;
+		std::unordered_map<IntVector3, cube::Block>* to_paste;
 	} ZoneBuffer;
 
 	typedef struct {
@@ -12,13 +29,13 @@ namespace cubewg {
 	} ZoneBufferArr8;
 
 	// Map from the owner zone to buffers to paste in the region
-	std::map<IntVector2, ZoneBufferArr8>* zoneBuffers;
+	std::unordered_map<IntVector2, ZoneBufferArr8>* zoneBuffers;
 
 	// modulo x and y by blocks in each zone (64x64)
 	// TODO don't do this. This is a bad idea as it has wacky behaviour if someone tries to get blocks outside their zone accidentally.
 
 	void WorldRegion::Initialise() {
-		zoneBuffers = new std::map<IntVector2, ZoneBufferArr8>;
+		zoneBuffers = new std::unordered_map<IntVector2, ZoneBufferArr8>;
 	}
 
 	IntVector3 ToLocalBlockPos(LongVector3 block_pos) {
@@ -136,7 +153,7 @@ namespace cubewg {
 	}
 
 	void SetBlockInBuffer(cube::Zone* parent, LongVector2 zone_pos, IntVector3 local_block_pos, cube::Block block) {
-		std::map<IntVector2, ZoneBufferArr8>::iterator bufs = zoneBuffers->find(parent->position);
+		std::unordered_map<IntVector2, ZoneBufferArr8>::iterator bufs = zoneBuffers->find(parent->position);
 		int index = BufferArrLoc(zone_pos.x - parent->position.x, zone_pos.y - parent->position.y);
 
 		// I hate memory management
@@ -145,7 +162,7 @@ namespace cubewg {
 
 			// initialise if not yet
 			if (!buffer_collection.neighbours[index].to_paste) {
-				buffer_collection.neighbours[index].to_paste = new std::map<IntVector3, cube::Block>;
+				buffer_collection.neighbours[index].to_paste = new std::unordered_map<IntVector3, cube::Block>;
 			}
 
 			// add the block
@@ -153,7 +170,7 @@ namespace cubewg {
 		} else {
 			// create value
 			ZoneBufferArr8 new_val;
-			new_val.neighbours[index].to_paste = new std::map<IntVector3, cube::Block>;
+			new_val.neighbours[index].to_paste = new std::unordered_map<IntVector3, cube::Block>;
 			(*new_val.neighbours[index].to_paste)[local_block_pos] = block;
 
 			(*zoneBuffers)[parent->position] = new_val;
