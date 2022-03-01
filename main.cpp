@@ -9,13 +9,15 @@ namespace cubewg {
 	/* Mod class containing all the functions for the mod.
 	*/
 	class WorldGenMod : GenericMod {
+		cube::Block blue_leaves;
+		cube::Block log;
 
 		void GenerateTree(WorldRegion& region, int x, int y, int z, std::set<cube::Zone*>& to_remesh) {
 			const int kHeight = 10;
 
 			// generate trunk
 			for (int i = 0; i < kHeight - 4; i++) {
-				region.SetBlock(LongVector3(x, y, z + i), 130, 90, 0, cube::Block::Solid, to_remesh);
+				region.SetBlock(LongVector3(x, y, z + i), log, to_remesh);
 			}
 
 			// generate leaves
@@ -30,7 +32,7 @@ namespace cubewg {
 							int total_y = y + yo;
 
 							if (xo == 0 || yo == 0) { // not corners
-								region.SetBlock(LongVector3(total_x, total_y, total_z), 0, 0, 140, cube::Block::Solid, to_remesh);
+								region.SetBlock(LongVector3(total_x, total_y, total_z), blue_leaves, to_remesh);
 							}
 						}
 					}
@@ -41,7 +43,7 @@ namespace cubewg {
 						for (int yo = -2; yo <= 2; yo++) {
 							int totalY = y + yo;
 
-							region.SetBlock(LongVector3(totalX, totalY, total_z), 0, 0, 140, cube::Block::Solid, to_remesh);
+							region.SetBlock(LongVector3(totalX, totalY, total_z), blue_leaves, to_remesh);
 						}
 					}
 				}
@@ -148,6 +150,17 @@ namespace cubewg {
 		*/
 		virtual void Initialize() override {
 			WorldRegion::Initialise();
+
+			blue_leaves.red = 0;
+			blue_leaves.green = 30;
+			blue_leaves.blue = 140;
+			blue_leaves.type = cube::Block::Leaves;
+			blue_leaves.breakable = true;
+
+			log.red = 130;
+			log.green = 90;
+			log.blue = 0;
+			log.type = cube::Block::Tree;
 			return;
 		}
 
@@ -158,21 +171,23 @@ namespace cubewg {
 
 			cube::Block* blocc;
 			bool hadblocc = false;
+			std::set<cube::Zone*> to_remesh;
 
-			int gen_z = region.GetHeight(LongVector2(32, 32), true);
+			WorldRegion::PasteZone(zone, to_remesh);
+
+			int gen_z = region.GetHeight(LongVector2(0, 0), true);
 
 			if (gen_z != kNoPosition) {
-				std::set<cube::Zone*> to_remesh;
-
-				GenerateTree(region, 32, 32, gen_z, to_remesh);
-
-				//std::wstring w = std::to_wstring(to_remesh.size()) + LF;
-				//cube::GetGame()->PrintMessage((L"Remeshing N Chunks due to Natural Tree Gen: " + w).c_str());
-
-				for (cube::Zone* zone : to_remesh) {
-					zone->chunk.Remesh();
-				}
+				GenerateTree(region, 0, 0, gen_z, to_remesh);
 			}
+
+			for (cube::Zone* zone : to_remesh) {
+				zone->chunk.Remesh();
+			}
+		}
+
+		virtual void OnZoneDestroy(cube::Zone* zone) override {
+			WorldRegion::CleanUpBuffers(zone->position);
 		}
 	};
 }

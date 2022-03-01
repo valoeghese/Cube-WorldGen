@@ -36,9 +36,11 @@ namespace cubewg {
 
 		cube::Block* GetBlock(LongVector3 block_pos);
 
-		void SetBlock(LongVector3 block_pos, int r, int g, int b, cube::Block::Type type, std::set<cube::Zone*>& to_remesh);
+		void SetBlock(LongVector3 block_pos, cube::Block block, std::set<cube::Zone*>& to_remesh);
 
 		// static methods
 		static void Initialise();
+		static void CleanUpBuffers(IntVector2 zone_pos);
+		static void PasteZone(cube::Zone* zone, std::set<cube::Zone*>& to_remesh);
 	};
 }
