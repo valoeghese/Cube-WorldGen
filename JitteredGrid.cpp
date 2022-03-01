@@ -45,7 +45,7 @@ double RandomDouble(int64_t seed, int64_t x, int64_t y) {
 
 double SqrDist(double x0, double y0, double x1, double y1) {
 	double dx = x1 - x0;
-	double dy = y1 - y1;
+	double dy = y1 - y0;
 	return dx * dx + dy * dy;
 }
 
@@ -76,8 +76,8 @@ cubewg::JitteredPoint cubewg::JitteredGrid::SampleVoronoi(double x, double y) {
 		for (int yo = -1; yo <= 1; yo++) {
 			int grid_y = cgrid_y + yo;
 
-			double point_x = grid_x + this->relaxation * 0.5 + unrelaxation * RandomDouble(grid_x, grid_y, this->seed);
-			double point_y = grid_y + this->relaxation * 0.5 + unrelaxation * RandomDouble(grid_x, grid_y, this->seed + 1);
+			double point_x = grid_x + this->relaxation * 0.5 + unrelaxation * RandomDouble(this->seed, grid_x, grid_y);
+			double point_y = grid_y + this->relaxation * 0.5 + unrelaxation * RandomDouble(this->seed + 1, grid_x, grid_y);
 			double point_dist = SqrDist(x, y, point_x, point_y);
 
 			if (point_dist < result_dist) {
@@ -108,8 +108,8 @@ double cubewg::JitteredGrid::Worley(double x, double y) {
 		for (int yo = -1; yo <= 1; yo++) {
 			int grid_y = cgrid_y + yo;
 
-			double point_x = grid_x + this->relaxation * 0.5 + unrelaxation * RandomDouble(grid_x, grid_y, this->seed);
-			double point_y = grid_y + this->relaxation * 0.5 + unrelaxation * RandomDouble(grid_x, grid_y, this->seed + 1);
+			double point_x = grid_x + this->relaxation * 0.5 + unrelaxation * RandomDouble(this->seed, grid_x, grid_y);
+			double point_y = grid_y + this->relaxation * 0.5 + unrelaxation * RandomDouble(this->seed + 1, grid_x, grid_y);
 			double point_dist = SqrDist(x, y, point_x, point_y);
 
 			if (point_dist < result_dist) {
@@ -137,8 +137,8 @@ double cubewg::JitteredGrid::Worley2(double x, double y) {
 		for (int yo = -1; yo <= 1; yo++) {
 			int grid_y = cgrid_y + yo;
 
-			double point_x = grid_x + this->relaxation * 0.5 + unrelaxation * RandomDouble(grid_x, grid_y, this->seed);
-			double point_y = grid_y + this->relaxation * 0.5 + unrelaxation * RandomDouble(grid_x, grid_y, this->seed + 1);
+			double point_x = grid_x + this->relaxation * 0.5 + unrelaxation * RandomDouble(this->seed, grid_x, grid_y);
+			double point_y = grid_y + this->relaxation * 0.5 + unrelaxation * RandomDouble(this->seed + 1, grid_x, grid_y);
 			double point_dist = SqrDist(x, y, point_x, point_y);
 
 			if (point_dist < result_dist) {
