@@ -92,8 +92,8 @@ namespace cubewg {
 		int base_y = zone->position.y;
 
 		// search around it in a square for buffers situated in this zone
-		for (int dx = -1; dx <= -1; dx++) {
-			for (int dy = -1; dy <= -1; dy++) {
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dy = -1; dy <= 1; dy++) {
 				if (dx == 0 && dy == 0) continue; // cannot buffer into self
 
 				IntVector2 search_location(base_x + dx, base_y + dy);
@@ -105,9 +105,15 @@ namespace cubewg {
 
 					// reverse of dx and dy to get the relative coords of this zone from the buffer's parent zone
 					int index = BufferArrLoc(-dx, -dy);
+					//cube::GetGame()->PrintMessage(L"Gonna look in index ");
+					//cube::GetGame()->PrintMessage(std::to_wstring(index).c_str());
+					//cube::GetGame()->PrintMessage(L"\n");
 					std::unordered_map<IntVector3, cube::Block>* to_paste = buffer_collection.neighbours[index].to_paste;
 
 					if (to_paste) {
+						//cube::GetGame()->PrintMessage(L"Placing ");
+						//cube::GetGame()->PrintMessage(std::to_wstring(to_paste->size()).c_str());
+						//cube::GetGame()->PrintMessage(L" Blocks.\n");
 						for (auto it = to_paste->begin(); it != to_paste->end(); it++) {
 							SetBlockInZone(zone, it->first, it->second, to_remesh);
 						}
