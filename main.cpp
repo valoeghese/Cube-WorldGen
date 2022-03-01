@@ -191,7 +191,7 @@ namespace cubewg {
 			// generate city walls
 			for (int x = 0; x < cube::BLOCKS_PER_ZONE; x++) {
 				for (int y = 0; y < cube::BLOCKS_PER_ZONE; y++) {
-					double sqrdist_to_pt = citiesGrid.Worley(zone->position.x * cube::BLOCKS_PER_ZONE - x, zone->position.y * cube::BLOCKS_PER_ZONE - y);
+					double sqrdist_to_pt = citiesGrid.Worley((zone->position.x * cube::BLOCKS_PER_ZONE - x) * 0.001, (zone->position.y * cube::BLOCKS_PER_ZONE - y) * 0.001);
 
 					if (sqrdist_to_pt <= 0.1 && sqrdist_to_pt >= 0.08) {
 						int height = region.GetHeight(LongVector2(x, y), true);
