@@ -2,6 +2,9 @@
 
 #include "JitteredGrid.h"
 
+#include <limits>
+#include <cmath>
+
 const int64_t kMaxInt64 = std::numeric_limits<int64_t>::max();
 
 // constructors

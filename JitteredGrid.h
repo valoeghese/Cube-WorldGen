@@ -1,8 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <limits>
-#include <cmath>
 
 using std::int64_t;
 

@@ -1,16 +1,22 @@
 #include "main.h"
 
+#include "JitteredGrid.h"
+
 #define LF L"\n";
 
 // Includes for the self written hooks.
 // For example: #include "src/hooks/a_hook.h" 
 
 namespace cubewg {
+	JitteredGrid citiesGrid;
+
+	cube::Block blue_leaves;
+	cube::Block log;
+	cube::Block city_wall;
+
 	/* Mod class containing all the functions for the mod.
 	*/
 	class WorldGenMod : GenericMod {
-		cube::Block blue_leaves;
-		cube::Block log;
 
 		void GenerateTree(WorldRegion& region, int x, int y, int z, std::set<cube::Zone*>& to_remesh) {
 			const int kHeight = 10;
@@ -162,6 +168,12 @@ namespace cubewg {
 			log.blue = 0;
 			log.type = cube::Block::Tree;
 			log.breakable = false;
+
+			city_wall.red = 130;
+			city_wall.green = 150;
+			city_wall.blue = 160;
+			city_wall.type = cube::Block::Solid;
+			city_wall.breakable = false;
 			return;
 		}
 
@@ -176,10 +188,21 @@ namespace cubewg {
 
 			WorldRegion::PasteZone(zone, to_remesh);
 
-			int gen_z = region.GetHeight(LongVector2(0, 0), true);
+			// generate city walls
+			for (int x = 0; x < cube::BLOCKS_PER_ZONE; x++) {
+				for (int y = 0; y < cube::BLOCKS_PER_ZONE; y++) {
+					double sqrdist_to_pt = citiesGrid.Worley(zone->position.x * cube::BLOCKS_PER_ZONE - x, zone->position.y * cube::BLOCKS_PER_ZONE - y);
 
-			if (gen_z != kNoPosition) {
-				GenerateTree(region, 0, 0, gen_z, to_remesh);
+					if (sqrdist_to_pt <= 0.1 && sqrdist_to_pt >= 0.08) {
+						int height = region.GetHeight(LongVector2(x, y), true);
+
+						if (height != kNoPosition) {
+							for (int zo = 0; zo < 16; zo++) {
+								region.SetBlock(LongVector3(x, y, height + zo), city_wall, to_remesh);
+							}
+						}
+					}
+				}
 			}
 
 			for (cube::Zone* zone : to_remesh) {
