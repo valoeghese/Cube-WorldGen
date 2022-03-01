@@ -1,6 +1,6 @@
 #include "WorldRegion.h"
 
-#include <map>
+#include <mutex>
 
 namespace std {
 	template <>
@@ -24,13 +24,13 @@ namespace cubewg {
 	void SetBlockInZone(cube::Zone* zone, IntVector3 local_block_pos, cube::Block block, std::set<cube::Zone*>& to_remesh);
 
 	// structs
-	typedef struct {
-		std::unordered_map<IntVector3, cube::Block>* to_paste;
-	} ZoneBuffer;
+	struct ZoneBuffer {
+		std::unordered_map<IntVector3, cube::Block>* to_paste = nullptr;
+	};
 
-	typedef struct {
+	struct ZoneBufferArr8 {
 		ZoneBuffer neighbours[8];
-	} ZoneBufferArr8;
+	};
 
 	// Map from the owner zone to buffers to paste in the region
 	std::unordered_map<IntVector2, ZoneBufferArr8>* zoneBuffers;
@@ -58,7 +58,13 @@ namespace cubewg {
 	// Please don't have memory leaks please don't have memory leaks
 	// I hate memory management
 
+	std::mutex mut;
+
 	void WorldRegion::CleanUpBuffers(IntVector2 zone_pos) {
+		if (!zoneBuffers) return;
+
+		std::lock_guard<std::mutex> guard(mut); // lock
+
 		std::unordered_map<IntVector2, ZoneBufferArr8>::iterator bufs = zoneBuffers->find(zone_pos);
 		
 		if (bufs != zoneBuffers->end()) {
@@ -76,12 +82,18 @@ namespace cubewg {
 	}
 
 	void WorldRegion::PasteZone(cube::Zone* zone, std::set<cube::Zone*>& to_remesh) {
+		if (!zoneBuffers) return;
+
+		std::lock_guard<std::mutex> guard(mut); // lock
+
 		int base_x = zone->position.x;
 		int base_y = zone->position.y;
 
 		// search around it in a square for buffers situated in this zone
 		for (int dx = -1; dx <= -1; dx++) {
 			for (int dy = -1; dy <= -1; dy++) {
+				if (dx == 0 && dy == 0) continue; // cannot buffer into self
+
 				IntVector2 search_location(base_x + dx, base_y + dy);
 
 				std::unordered_map<IntVector2, ZoneBufferArr8>::iterator bufs = zoneBuffers->find(search_location);
@@ -103,6 +115,35 @@ namespace cubewg {
 					}
 				}
 			}
+		}
+	}
+
+	void SetBlockInBuffer(cube::Zone* parent, int dx, int dy, IntVector3 local_block_pos, cube::Block block) {
+		if (!zoneBuffers) return;
+
+		std::lock_guard<std::mutex> guard(mut); // lock
+
+		std::unordered_map<IntVector2, ZoneBufferArr8>::iterator bufs = zoneBuffers->find(parent->position);
+		int index = BufferArrLoc(dx, dy);
+
+		// I still hate memory management
+		if (bufs != zoneBuffers->end()) {
+			ZoneBufferArr8& buffer_collection = bufs->second;
+
+			// initialise if not yet
+			if (!buffer_collection.neighbours[index].to_paste) {
+				buffer_collection.neighbours[index].to_paste = new std::unordered_map<IntVector3, cube::Block>;
+			}
+
+			// add the block
+			(*buffer_collection.neighbours[index].to_paste)[local_block_pos] = block;
+		} else {
+			// create value
+			ZoneBufferArr8 new_val;
+			new_val.neighbours[index].to_paste = new std::unordered_map<IntVector3, cube::Block>;
+			(*new_val.neighbours[index].to_paste)[local_block_pos] = block;
+
+			(*zoneBuffers)[parent->position] = new_val;
 		}
 	}
 
@@ -212,31 +253,6 @@ namespace cubewg {
 		}
 	}
 
-	void SetBlockInBuffer(cube::Zone* parent, int dx, int dy, IntVector3 local_block_pos, cube::Block block) {
-		std::unordered_map<IntVector2, ZoneBufferArr8>::iterator bufs = zoneBuffers->find(parent->position);
-		int index = BufferArrLoc(dx, dy);
-
-		// I still hate memory management
-		if (bufs != zoneBuffers->end()) {
-			ZoneBufferArr8& buffer_collection = bufs->second;
-
-			// initialise if not yet
-			if (!buffer_collection.neighbours[index].to_paste) {
-				buffer_collection.neighbours[index].to_paste = new std::unordered_map<IntVector3, cube::Block>;
-			}
-
-			// add the block
-			(*buffer_collection.neighbours[index].to_paste)[local_block_pos] = block;
-		} else {
-			// create value
-			ZoneBufferArr8 new_val;
-			new_val.neighbours[index].to_paste = new std::unordered_map<IntVector3, cube::Block>;
-			(*new_val.neighbours[index].to_paste)[local_block_pos] = block;
-
-			(*zoneBuffers)[parent->position] = new_val;
-		}
-	}
-
 	void WorldRegion::SetBlock(LongVector3 block_pos, cube::Block block, std::set<cube::Zone*>& to_remesh) {
 		if (this->world) {
 			this->world->SetBlock(block_pos, block, false);
@@ -265,7 +281,8 @@ namespace cubewg {
 		else {
 			// handle generation into the neighbouring 8 zones via buffers
 			// coordinates should be in zone coords
-			int dx = 0, dy = 0;
+			int dx = 0;
+			int dy = 0;
 
 			if (block_pos.x < 0) {
 				dx = -1;

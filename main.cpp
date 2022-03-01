@@ -161,6 +161,7 @@ namespace cubewg {
 			log.green = 90;
 			log.blue = 0;
 			log.type = cube::Block::Tree;
+			log.breakable = false;
 			return;
 		}
 
