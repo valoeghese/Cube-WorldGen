@@ -63,7 +63,7 @@ namespace cubewg {
 	void WorldRegion::CleanUpBuffers(IntVector2 zone_pos) {
 		if (!zoneBuffers) return;
 
-		std::lock_guard<std::mutex> guard(mut); // lock
+		mut.lock(); // lock
 
 		std::unordered_map<IntVector2, ZoneBufferArr8>::iterator bufs = zoneBuffers->find(zone_pos);
 		
@@ -79,12 +79,14 @@ namespace cubewg {
 
 			zoneBuffers->erase(zone_pos);
 		}
+
+		mut.unlock();
 	}
 
 	void WorldRegion::PasteZone(cube::Zone* zone, std::set<cube::Zone*>& to_remesh) {
 		if (!zoneBuffers) return;
 
-		std::lock_guard<std::mutex> guard(mut); // lock
+		mut.lock(); // lock
 
 		int base_x = zone->position.x;
 		int base_y = zone->position.y;
@@ -116,12 +118,12 @@ namespace cubewg {
 				}
 			}
 		}
+
+		mut.unlock();
 	}
 
 	void SetBlockInBuffer(cube::Zone* parent, int dx, int dy, IntVector3 local_block_pos, cube::Block block) {
 		if (!zoneBuffers) return;
-
-		std::lock_guard<std::mutex> guard(mut); // lock
 
 		std::unordered_map<IntVector2, ZoneBufferArr8>::iterator bufs = zoneBuffers->find(parent->position);
 		int index = BufferArrLoc(dx, dy);
@@ -302,10 +304,16 @@ namespace cubewg {
 			}
 			else {
 				IntVector2 zone_pos = this->zone->position;
+				mut.lock();
 				cube::Zone* zone = this->zone->world->GetZone(zone_pos.x + dx, zone_pos.y + dy);
 
-				if (zone) SetBlockInZone(zone, ToLocalBlockPos(block_pos), block, to_remesh);
-				else SetBlockInBuffer(this->zone, dx, dy, ToLocalBlockPos(block_pos), block);
+				if (zone) {
+					mut.unlock();
+					SetBlockInZone(zone, ToLocalBlockPos(block_pos), block, to_remesh);
+				} else {
+					SetBlockInBuffer(this->zone, dx, dy, ToLocalBlockPos(block_pos), block);
+					mut.unlock();
+				}
 			}
 		}
 	}
