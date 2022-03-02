@@ -7,5 +7,5 @@ add_library (Dummy SHARED
 "WorldRegion.h"
 "JitteredGrid.h"
 "JitteredGrid.cpp"
-)
+ "Structure.h" "Structure.cpp" "City.h" "City.cpp")
 target_link_libraries (Dummy LINK_PUBLIC CWSDK)

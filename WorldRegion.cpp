@@ -1,6 +1,7 @@
 #include "WorldRegion.h"
 
 #include <mutex>
+#include <list>
 
 namespace std {
 	template <>
@@ -20,6 +21,9 @@ namespace std {
 }
 
 namespace cubewg {
+	// the list of stuff to generate! We use a linked list rather than std::vector to ensure fast addition and iteration. And we don't need random access.
+	std::list<Structure*>* structures;
+
 	// internal header stuff
 	void SetBlockInZone(cube::Zone* zone, IntVector3 local_block_pos, cube::Block block, std::set<cube::Zone*>& to_remesh);
 
@@ -36,7 +40,9 @@ namespace cubewg {
 	std::unordered_map<IntVector2, ZoneBufferArr8>* zoneBuffers;
 
 	void WorldRegion::Initialise() {
+		// iirc there were runtime crashes if I didn't delay initialisation. Hence, pointers.
 		zoneBuffers = new std::unordered_map<IntVector2, ZoneBufferArr8>;
+		structures = new std::list<Structure*>;
 	}
 
 	/* Get the location in an array of buffers for the x_dif and y_dif (dx and dy from the parent to the zone to write in)
@@ -59,6 +65,10 @@ namespace cubewg {
 	// I hate memory management
 
 	std::mutex mut;
+
+	void WorldRegion::AddStructure(cubewg::Structure* structure) {
+		structures->push_back(structure);
+	}
 
 	void WorldRegion::CleanUpBuffers(IntVector2 zone_pos) {
 		if (!zoneBuffers) return;
@@ -83,7 +93,7 @@ namespace cubewg {
 		mut.unlock();
 	}
 
-	void WorldRegion::PasteZone(cube::Zone* zone, std::set<cube::Zone*>& to_remesh) {
+	void WorldRegion::GenerateInZone(cube::Zone* zone, std::set<cube::Zone*>& to_remesh) {
 		if (!zoneBuffers) return;
 
 		mut.lock(); // lock
@@ -126,6 +136,12 @@ namespace cubewg {
 		}
 
 		mut.unlock();
+
+		WorldRegion region(zone);
+
+		for (Structure* structure : *structures) {
+			structure->Generate(region, zone->position, to_remesh);
+		}
 	}
 
 	void SetBlockInBuffer(cube::Zone* parent, int dx, int dy, IntVector3 local_block_pos, cube::Block block) {
@@ -345,5 +361,15 @@ namespace cubewg {
 				}
 			}
 		}
+	}
+
+	cube::Block BlockOf(const int r, const int g, const int b, const cube::Block::Type type, const bool breakable) {
+		cube::Block result;
+		result.red = r;
+		result.green = g;
+		result.blue = b;
+		result.type = type;
+		result.breakable = breakable;
+		return result; // yeah this copies the entire struct but does it really matter
 	}
 }

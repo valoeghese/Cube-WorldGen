@@ -2,9 +2,13 @@
 
 #include "CWSDK/cwsdk.h"
 
+#include "Structure.h"
+
 namespace cubewg {
 	// consts
 	const int kNoPosition = -32768;
+
+	cube::Block BlockOf(const int r, const int g, const int b, const cube::Block::Type type = cube::Block::Solid, const bool breakable = false);
 
 	/* Abstraction between zones and worlds with some additional useful utilities. Zonal world generation hooks into zone buffers.
 	*/
@@ -42,8 +46,18 @@ namespace cubewg {
 		void SetBlock(LongVector3 block_pos, cube::Block block, std::set<cube::Zone*>& to_remesh);
 
 		// static methods
+		/* Add a structure to be generated in the world.
+		*/
+		static void AddStructure(cubewg::Structure* structure);
+
+		/* Internal method called on initialisation.
+		*/
 		static void Initialise();
+		/* Internal method called on zone deletion.
+		*/
 		static void CleanUpBuffers(IntVector2 zone_pos);
-		static void PasteZone(cube::Zone* zone, std::set<cube::Zone*>& to_remesh);
+		/* Internal method called on zone generation.
+		*/
+		static void GenerateInZone(cube::Zone* zone, std::set<cube::Zone*>& to_remesh);
 	};
 }

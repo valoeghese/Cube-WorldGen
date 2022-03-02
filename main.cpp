@@ -1,6 +1,9 @@
 #include "main.h"
 
+// includes from Worldgen Mod
+#include "WorldRegion.h"
 #include "JitteredGrid.h"
+#include "City.h"
 
 #define LF L"\n";
 
@@ -8,22 +11,9 @@
 // For example: #include "src/hooks/a_hook.h" 
 
 namespace cubewg {
-	JitteredGrid citiesGrid;
-
 	cube::Block blue_leaves;
 	cube::Block log;
-	cube::Block city_wall;
 	cube::Block debug_zone_border;
-
-	cube::Block Block(const int r, const int g, const int b, const cube::Block::Type type = cube::Block::Solid, const bool breakable = false) {
-		cube::Block result;
-		result.red = r;
-		result.green = g;
-		result.blue = b;
-		result.type = type;
-		result.breakable = breakable;
-		return result; // yeah this copies the entire struct but does it really matter
-	}
 
 	/* Mod class containing all the functions for the mod.
 	*/
@@ -144,13 +134,13 @@ namespace cubewg {
 					cube::GetGame()->PrintMessage(feedback.c_str());
 				}
 
-				if (allpos || *message == L".pos worley") {
+				/*if (allpos || *message == L".pos worley") {
 					cube::Zone* zone = cube::GetGame()->world->GetCurrentZone();
 					long long int x = pymod(position.x, cube::BLOCKS_PER_ZONE);
 					long long int y = pymod(position.y, cube::BLOCKS_PER_ZONE);
 
-					double sample_x = (zone->position.x * cube::BLOCKS_PER_ZONE - x) * 0.001;
-					double sample_y = (zone->position.y * cube::BLOCKS_PER_ZONE - y) * 0.001;
+					double sample_x = (zone->position.x * cube::BLOCKS_PER_ZONE + x) * 0.001;
+					double sample_y = (zone->position.y * cube::BLOCKS_PER_ZONE + y) * 0.001;
 
 					double worley = citiesGrid.Worley(sample_x, sample_y);
 					unsigned char grey = worley > 1 ? 255 : (unsigned char)(worley * 255.0);
@@ -159,7 +149,7 @@ namespace cubewg {
 						+ L", Sample: [" + std::to_wstring(sample_x) + L", " + std::to_wstring(sample_y) + L"])" + LF;
 					cube::GetGame()->PrintMessage(feedback.c_str());
 				}
-
+				*/
 				if (allpos || *message == L".pos read") {
 					cube::Block* blocc = cube::GetGame()->world->GetBlock(position);
 
@@ -204,13 +194,10 @@ namespace cubewg {
 			log.type = cube::Block::Tree;
 			log.breakable = false;
 
-			city_wall.red = 130;
-			city_wall.green = 150;
-			city_wall.blue = 160;
-			city_wall.type = cube::Block::Solid;
-			city_wall.breakable = false;
+			debug_zone_border = BlockOf(255, 255, 0, cube::Block::Solid, true);
 
-			debug_zone_border = Block(255, 255, 0, cube::Block::Solid, true);
+			City* city = new City;
+			WorldRegion::AddStructure(city);
 			return;
 		}
 
@@ -223,36 +210,7 @@ namespace cubewg {
 			bool hadblocc = false;
 			std::set<cube::Zone*> to_remesh;
 
-			WorldRegion::PasteZone(zone, to_remesh);
-
-			// generate city walls
-			for (int x = 0; x < cube::BLOCKS_PER_ZONE; x++) {
-				for (int y = 0; y < cube::BLOCKS_PER_ZONE; y++) {
-					double worley = citiesGrid.Worley((zone->position.x * cube::BLOCKS_PER_ZONE - x) * 0.001, (zone->position.y * cube::BLOCKS_PER_ZONE - y) * 0.001);
-
-					int height = region.GetHeight(LongVector2(x, y), true);
-
-					if (height != kNoPosition) {
-						unsigned char grey = worley > 1 ? 255 : (unsigned char) (worley * 255.0);
-						cube::Block noise_block = Block(grey, grey, grey);
-						region.SetBlock(LongVector3(x, y, height), noise_block, to_remesh);
-
-						if (x == 0 || y == 0) {
-							region.SetBlock(LongVector3(x, y, height + 1), debug_zone_border, to_remesh);
-						}
-					}
-
-					/*if (worley <= 0.1 && worley >= 0.08) {
-						int height = region.GetHeight(LongVector2(x, y), true);
-
-						if (height != kNoPosition) {
-							for (int zo = 0; zo < 10; zo++) {
-								region.SetBlock(LongVector3(x, y, height + zo), city_wall, to_remesh);
-							}
-						}
-					}*/
-				}
-			}
+			WorldRegion::GenerateInZone(zone, to_remesh);
 
 			for (cube::Zone* zone : to_remesh) {
 				zone->chunk.Remesh();

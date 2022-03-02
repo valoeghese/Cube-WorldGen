@@ -17,9 +17,6 @@
 #include "CWSDK/cwsdk.h"
 #include "src/memory/memory_helper.h"
 
-// includes from Worldgen Mod
-#include "WorldRegion.h"
-
 //All the assembly defines
 #define no_optimize __attribute__((optimize("O0")))
 
