@@ -2,6 +2,8 @@
 
 cubewg::City::City() {
 	city_wall = BlockOf(130, 150, 160);
+	pavement = BlockOf(90, 90, 90, cube::Block::Ground);
+	cities_grid = JitteredGrid(0, 0.2);
 }
 
 cubewg::City::~City() {
@@ -11,14 +13,56 @@ void cubewg::City::Generate(WorldRegion& region, const IntVector2& zone_position
 	// generate city walls
 	for (int x = 0; x < cube::BLOCKS_PER_ZONE; x++) {
 		for (int y = 0; y < cube::BLOCKS_PER_ZONE; y++) {
-			double worley = cities_grid.Worley((zone_position.x * cube::BLOCKS_PER_ZONE + x) * 0.001, (zone_position.y * cube::BLOCKS_PER_ZONE + y) * 0.001);
+			double worley = cities_grid.Worley((zone_position.x * cube::BLOCKS_PER_ZONE + x) * 0.0005, (zone_position.y * cube::BLOCKS_PER_ZONE + y) * 0.0005);
 
-			if (worley <= 0.1 && worley >= 0.08) {
+			if (worley <= 0.025 && worley >= 0.02) {
+				int height = region.GetHeight(LongVector2(x, y), true);
+				const int wall_height = (worley <= 0.024 && worley >= 0.021) ? 11 : 14;
+
+				if (height != kNoPosition) {
+					cube::Block* abv_surface_block = region.GetBlock(LongVector3(x, y, height));
+
+					// TODO account for lava and trees
+					if (!abv_surface_block || abv_surface_block->type != cube::Block::Water) { // TODO when I change the GetHeight implementation alter this line accordingly
+						for (int zo = 0; zo < wall_height; zo++) {
+							region.SetBlock(LongVector3(x, y, height + zo), city_wall, to_remesh);
+						}
+					}
+				}
+			}
+			else if (worley < 0.02) {
 				int height = region.GetHeight(LongVector2(x, y), true);
 
 				if (height != kNoPosition) {
-					for (int zo = 0; zo < 10; zo++) {
-						region.SetBlock(LongVector3(x, y, height + zo), city_wall, to_remesh);
+					cube::Block* abv_surface_block = region.GetBlock(LongVector3(x, y, height));
+					
+					if (!abv_surface_block || abv_surface_block->type != cube::Block::Water) {
+						region.SetBlock(LongVector3(x, y, height - 1), pavement, to_remesh);
+					}
+				}
+			}
+		}
+	}
+
+	// generate buildings
+	double centre_worley = cities_grid.Worley((zone_position.x * cube::BLOCKS_PER_ZONE + 32) * 0.0005, (zone_position.y * cube::BLOCKS_PER_ZONE + 32) * 0.0005);
+
+	if (centre_worley < 0.018) {
+		int height = region.GetHeight(LongVector2(32, 32), true);
+
+		cube::Block* abv_surface_block = region.GetBlock(LongVector3(32, 32, height));
+
+		if (!abv_surface_block || region.GetBlock(LongVector3(32, 32, height))->type != cube::Block::Water) { // TODO when I change the GetHeight implementation alter this line accordingly
+			for (int xo = -10; xo <= 10; xo++) {
+				int local_x = xo + 32;
+
+				for (int yo = -10; yo <= 10; yo++) {
+					int local_y = yo + 32;
+
+					if (std::abs(xo) == 10 || std::abs(yo) == 10) { // only on borders
+						for (int zo = 0; zo <= 10; zo++) {
+							region.SetBlock(LongVector3(local_x, local_y, zo + height), city_wall, to_remesh);
+						}
 					}
 				}
 			}

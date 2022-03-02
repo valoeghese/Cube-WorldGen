@@ -9,6 +9,7 @@ namespace cubewg {
 	private:
 		JitteredGrid cities_grid;
 		cube::Block city_wall;
+		cube::Block pavement;
 	public:
 		City();
 		~City();
