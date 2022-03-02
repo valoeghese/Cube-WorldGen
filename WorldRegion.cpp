@@ -194,6 +194,29 @@ namespace cubewg {
 		}
 	}
 
+	int WorldRegion::GetBaseZ(LongVector2 block_pos) {
+		cube::Zone* zone;
+		IntVector2 local_block_pos;
+
+		if (this->world) {
+			IntVector2 zone_pos = cube::Zone::ZoneCoordsFromBlocks(block_pos.x, block_pos.y);
+			zone = this->world->GetZone(zone_pos);
+			local_block_pos = ToLocalBlockPos(block_pos);
+		} else {
+			zone = this->zone;
+			local_block_pos = AsLocalBlockPos(block_pos);
+		}
+
+		// if zone does not exist return no position
+		if (!zone) {
+			return cubewg::kNoPosition;
+		}
+
+		int field_index = local_block_pos.x * cube::BLOCKS_PER_ZONE + local_block_pos.y;
+		cube::Field* field = &zone->fields[field_index];
+		return field->base_z;
+	}
+
 	int WorldRegion::GetHeight(LongVector2 block_pos, const bool require_surface) {
 		cube::Zone* zone;
 		IntVector2 local_block_pos;
@@ -212,7 +235,7 @@ namespace cubewg {
 			return cubewg::kNoPosition;
 		}
 		
-		int field_index = block_pos.x * cube::BLOCKS_PER_ZONE + block_pos.y;
+		int field_index = local_block_pos.x * cube::BLOCKS_PER_ZONE + local_block_pos.y;
 		cube::Field* field = &zone->fields[field_index];
 		int base_z = field->base_z;
 

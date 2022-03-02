@@ -37,11 +37,11 @@ namespace cubewg {
 		*/
 		JitteredPoint SampleVoronoi(double x, double y);
 
-		/* Samples worley noise using the points on this jittered grid. Uses euclidean squared distance.
+		/* Samples cellular noise using the points on this jittered grid. Uses euclidean squared distance.
 		*/
 		double Worley(double x, double y);
 
-		/* Samples 'd1-d2' type worley noise using the points on this jittered grid. Uses euclidean squared distance.
+		/* Samples 'd2-d1' type cellular noise using the points on this jittered grid. Uses euclidean squared distance.
 		*/
 		double Worley2(double x, double y);
 	};

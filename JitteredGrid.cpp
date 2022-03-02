@@ -102,10 +102,12 @@ double cubewg::JitteredGrid::Worley(double x, double y) {
 
 	double result_dist = 1000.0; // 1000 is an insanely high value we can't possibly get, so it's used as a placeholder
 
-	for (int xo = -1; xo <= 1; xo++) {
+	for (int xo = -2; xo <= 2; xo++) {
 		int grid_x = cgrid_x + xo;
 
-		for (int yo = -1; yo <= 1; yo++) {
+		for (int yo = -2; yo <= 2; yo++) {
+			if (std::abs(xo) == 2 && std::abs(yo) == 2) continue;
+
 			int grid_y = cgrid_y + yo;
 
 			double point_x = grid_x + this->relaxation * 0.5 + unrelaxation * RandomDouble(this->seed, grid_x, grid_y);
@@ -131,22 +133,24 @@ double cubewg::JitteredGrid::Worley2(double x, double y) {
 	double result_dist = 1000.0; // 1000 is an insanely high value we can't possibly get, so it's used as a placeholder
 	double result_dist_2 = 1000.0; // Again, a placeholder high value. This will be the second closest distance.
 
-	for (int xo = -1; xo <= 1; xo++) {
+	for (int xo = -2; xo <= 2; xo++) {
 		int grid_x = cgrid_x + xo;
 
-		for (int yo = -1; yo <= 1; yo++) {
+		for (int yo = -2; yo <= 2; yo++) {
 			int grid_y = cgrid_y + yo;
 
 			double point_x = grid_x + this->relaxation * 0.5 + unrelaxation * RandomDouble(this->seed, grid_x, grid_y);
 			double point_y = grid_y + this->relaxation * 0.5 + unrelaxation * RandomDouble(this->seed + 1, grid_x, grid_y);
 			double point_dist = SqrDist(x, y, point_x, point_y);
 
-			if (point_dist < result_dist) {
+			if (point_dist <= result_dist) {
 				result_dist_2 = result_dist;
 				result_dist = point_dist;
+			} else if (point_dist < result_dist_2) {
+				result_dist_2 = point_dist;
 			}
 		}
 	}
 
-	return result_dist - result_dist_2;
+	return result_dist_2 - result_dist;
 }

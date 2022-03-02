@@ -13,11 +13,21 @@ namespace cubewg {
 	cube::Block blue_leaves;
 	cube::Block log;
 	cube::Block city_wall;
+	cube::Block debug_zone_border;
+
+	cube::Block Block(const int r, const int g, const int b, const cube::Block::Type type = cube::Block::Solid, const bool breakable = false) {
+		cube::Block result;
+		result.red = r;
+		result.green = g;
+		result.blue = b;
+		result.type = type;
+		result.breakable = breakable;
+		return result; // yeah this copies the entire struct but does it really matter
+	}
 
 	/* Mod class containing all the functions for the mod.
 	*/
 	class WorldGenMod : GenericMod {
-
 		void GenerateTree(WorldRegion& region, int x, int y, int z, std::set<cube::Zone*>& to_remesh) {
 			const int kHeight = 10;
 
@@ -70,6 +80,8 @@ namespace cubewg {
 		 * @return	{int}
 		*/
 		virtual int OnChat(std::wstring* message) override {
+			bool allpos = *message == L".pos";
+
 			if (*message == L".gentree") {
 				try {
 					LongVector3 playerPos = BlockFromDots(cube::GetGame()->GetPlayer()->entity_data.position);
@@ -96,46 +108,69 @@ namespace cubewg {
 					std::wstring ws(s.begin(), s.end());
 					cube::GetGame()->PrintMessage(ws.c_str());
 				}
-				catch (std::string& s) {
-					std::wstring ws(s.begin(), s.end());
-					cube::GetGame()->PrintMessage(ws.c_str());
-				}
 			} else if (*message == L".height") {
 				// get the world the player is in
 				cube::World* world= cube::GetGame()->world;
-				WorldRegion region = WorldRegion(world);
+				WorldRegion region(world);
 				LongVector3 position = BlockFromDots(cube::GetGame()->GetPlayer()->entity_data.position);
 
 				int height = region.GetHeight(LongVector2(position.x, position.y));
 				int height_surface_required = region.GetHeight(LongVector2(position.x, position.y), true);
 
-				std::wstring message = L"Height at your current position is " + std::to_wstring(height) + L" (Surface Required: " + std::to_wstring(height_surface_required) + L")" + LF;
-				cube::GetGame()->PrintMessage(message.c_str());
+				std::wstring feedback = L"Height at your current position is " + std::to_wstring(height) + L" (Surface Required: " + std::to_wstring(height_surface_required) + L")" + LF;
+				cube::GetGame()->PrintMessage(feedback.c_str());
 
 				return 1;
-			} else if (*message == L".pos") {
+			} else if (allpos || message->substr(0, 5) == L".pos ") {
 				cube::Creature* player = cube::GetGame()->GetPlayer();
 				LongVector3 position = BlockFromDots(player->entity_data.position);
 
-				std::wstring message = L"Player Block Position is " + std::to_wstring(position.x) + L", " + std::to_wstring(position.y) + L", " + std::to_wstring(position.z) + LF;
-				cube::GetGame()->PrintMessage(message.c_str());
+				std::wstring feedback;
 
-				message = L"Player Block-In-Zone Position is " + std::to_wstring(pymod(position.x, cube::BLOCKS_PER_ZONE)) + L", " + std::to_wstring(pymod(position.y, cube::BLOCKS_PER_ZONE)) + LF;
-				cube::GetGame()->PrintMessage(message.c_str());
-
-				message = L"The current zone's base Z is " + std::to_wstring(cube::GetGame()->world->GetCurrentZone()->fields->base_z) + LF;
-				cube::GetGame()->PrintMessage(message.c_str());
-
-
-				cube::Block* blocc = cube::GetGame()->world->GetBlock(position);
-
-				if (blocc) {
-					message = L"Block at this position is type " + std::to_wstring(blocc->type) + LF;
-				} else {
-					message = L"No Block is at this position.\n";
+				if (allpos || *message == L".pos block") {
+					feedback = L"Player Block Position is " + std::to_wstring(position.x) + L", " + std::to_wstring(position.y) + L", " + std::to_wstring(position.z) + LF;
+					cube::GetGame()->PrintMessage(feedback.c_str());
 				}
 
-				cube::GetGame()->PrintMessage(message.c_str());
+				if (allpos || *message == L".pos local") {
+					feedback = L"Player Local Block Position is " + std::to_wstring(pymod(position.x, cube::BLOCKS_PER_ZONE)) + L", " + std::to_wstring(pymod(position.y, cube::BLOCKS_PER_ZONE)) + LF;
+					cube::GetGame()->PrintMessage(feedback.c_str());
+				}
+
+				if (allpos || *message == L".pos basez") {
+					WorldRegion region(cube::GetGame()->world);
+
+					feedback = L"The current column's base Z is " + std::to_wstring(region.GetBaseZ(LongVector2(position.x, position.y))) + LF;
+					cube::GetGame()->PrintMessage(feedback.c_str());
+				}
+
+				if (allpos || *message == L".pos worley") {
+					cube::Zone* zone = cube::GetGame()->world->GetCurrentZone();
+					long long int x = pymod(position.x, cube::BLOCKS_PER_ZONE);
+					long long int y = pymod(position.y, cube::BLOCKS_PER_ZONE);
+
+					double sample_x = (zone->position.x * cube::BLOCKS_PER_ZONE - x) * 0.001;
+					double sample_y = (zone->position.y * cube::BLOCKS_PER_ZONE - y) * 0.001;
+
+					double worley = citiesGrid.Worley(sample_x, sample_y);
+					unsigned char grey = worley > 1 ? 255 : (unsigned char)(worley * 255.0);
+
+					feedback = L"The current column's worley is " + std::to_wstring(worley) + L" (greyness: " + std::to_wstring(grey)
+						+ L", Sample: [" + std::to_wstring(sample_x) + L", " + std::to_wstring(sample_y) + L"])" + LF;
+					cube::GetGame()->PrintMessage(feedback.c_str());
+				}
+
+				if (allpos || *message == L".pos read") {
+					cube::Block* blocc = cube::GetGame()->world->GetBlock(position);
+
+					if (blocc) {
+						feedback = L"Block at this position is type " + std::to_wstring(blocc->type) + LF;
+					} else {
+						feedback = L"No Block is at this position.\n";
+					}
+
+					cube::GetGame()->PrintMessage(feedback.c_str());
+				}
 
 				return 1;
 			}
@@ -174,6 +209,8 @@ namespace cubewg {
 			city_wall.blue = 160;
 			city_wall.type = cube::Block::Solid;
 			city_wall.breakable = false;
+
+			debug_zone_border = Block(255, 255, 0, cube::Block::Solid, true);
 			return;
 		}
 
@@ -191,17 +228,29 @@ namespace cubewg {
 			// generate city walls
 			for (int x = 0; x < cube::BLOCKS_PER_ZONE; x++) {
 				for (int y = 0; y < cube::BLOCKS_PER_ZONE; y++) {
-					double sqrdist_to_pt = citiesGrid.Worley((zone->position.x * cube::BLOCKS_PER_ZONE - x) * 0.001, (zone->position.y * cube::BLOCKS_PER_ZONE - y) * 0.001);
+					double worley = citiesGrid.Worley((zone->position.x * cube::BLOCKS_PER_ZONE - x) * 0.001, (zone->position.y * cube::BLOCKS_PER_ZONE - y) * 0.001);
 
-					if (sqrdist_to_pt <= 0.1 && sqrdist_to_pt >= 0.08) {
+					int height = region.GetHeight(LongVector2(x, y), true);
+
+					if (height != kNoPosition) {
+						unsigned char grey = worley > 1 ? 255 : (unsigned char) (worley * 255.0);
+						cube::Block noise_block = Block(grey, grey, grey);
+						region.SetBlock(LongVector3(x, y, height), noise_block, to_remesh);
+
+						if (x == 0 || y == 0) {
+							region.SetBlock(LongVector3(x, y, height + 1), debug_zone_border, to_remesh);
+						}
+					}
+
+					/*if (worley <= 0.1 && worley >= 0.08) {
 						int height = region.GetHeight(LongVector2(x, y), true);
 
 						if (height != kNoPosition) {
-							for (int zo = 0; zo < 16; zo++) {
+							for (int zo = 0; zo < 10; zo++) {
 								region.SetBlock(LongVector3(x, y, height + zo), city_wall, to_remesh);
 							}
 						}
-					}
+					}*/
 				}
 			}
 
