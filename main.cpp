@@ -197,7 +197,7 @@ namespace cubewg {
 			debug_zone_border = BlockOf(255, 255, 0, cube::Block::Solid, true);
 
 			City* city = new City;
-			WorldRegion::AddStructure(city);
+			WorldRegion::AddStructure(L"city", city);
 			return;
 		}
 

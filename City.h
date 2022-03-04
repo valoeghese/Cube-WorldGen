@@ -14,6 +14,7 @@ namespace cubewg {
 		City();
 		~City();
 
-		void Generate(WorldRegion& region, const IntVector2& zone_position, std::set<cube::Zone*>& to_remesh);
+		int GenerateAt(WorldRegion& region, const IntVector3& origin, std::set<cube::Zone*>& to_remesh);
+		bool Generate(WorldRegion& region, const IntVector2& zone_position, std::set<cube::Zone*>& to_remesh);
 	};
 }

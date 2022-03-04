@@ -23,9 +23,11 @@ namespace std {
 namespace cubewg {
 	// the list of stuff to generate! We use a linked list rather than std::vector to ensure fast addition and iteration. And we don't need random access.
 	std::list<Structure*>* structures;
+	std::unordered_map<std::wstring, Structure*>* named_structures;
 
 	// internal header stuff
 	void SetBlockInZone(cube::Zone* zone, IntVector3 local_block_pos, cube::Block block, std::set<cube::Zone*>& to_remesh);
+	int CalculateHeight(cube::Zone* zone, int x, int y, Heightmap heightmap);
 
 	// structs
 	struct ZoneBuffer {
@@ -43,6 +45,7 @@ namespace cubewg {
 		// iirc there were runtime crashes if I didn't delay initialisation. Hence, pointers.
 		zoneBuffers = new std::unordered_map<IntVector2, ZoneBufferArr8>;
 		structures = new std::list<Structure*>;
+		named_structures = new std::unordered_map<std::wstring, Structure*>;
 	}
 
 	/* Get the location in an array of buffers for the x_dif and y_dif (dx and dy from the parent to the zone to write in)
@@ -66,7 +69,8 @@ namespace cubewg {
 
 	std::mutex mut;
 
-	void WorldRegion::AddStructure(cubewg::Structure* structure) {
+	void WorldRegion::AddStructure(std::wstring id, cubewg::Structure* structure) {
+		(*named_structures)[id] = structure;
 		structures->push_back(structure);
 	}
 
@@ -202,6 +206,32 @@ namespace cubewg {
 
 	// instance methods for WorldRegion
 
+	WorldRegion::WorldRegion(cube::World* world) {
+		this->world = world;
+		this->zone = nullptr;
+		this->heightmap_world_surface = nullptr;
+		this->heightmap_motion_blocking = nullptr;
+		this->heightmap_ocean_floor = nullptr;
+	}
+
+	WorldRegion::WorldRegion(cube::Zone* zone) {
+		this->world = nullptr;
+		this->zone = zone;
+		this->heightmap_world_surface = new int[cube::BLOCKS_PER_ZONE * cube::BLOCKS_PER_ZONE];
+		this->heightmap_motion_blocking = new int[cube::BLOCKS_PER_ZONE * cube::BLOCKS_PER_ZONE];
+		this->heightmap_ocean_floor = new int[cube::BLOCKS_PER_ZONE * cube::BLOCKS_PER_ZONE];
+
+		// TODO calculate heightmap values.
+	}
+
+	WorldRegion::~WorldRegion() {
+		if (this->zone) {
+			delete[] this->heightmap_world_surface;
+			delete[] this->heightmap_motion_blocking;
+			delete[] this->heightmap_ocean_floor;
+		}
+	}
+
 	cube::Block* WorldRegion::GetBlock(LongVector3 block_pos) {
 		if (this->world) {
 			return this->world->GetBlock(block_pos);
@@ -233,7 +263,7 @@ namespace cubewg {
 		return field->base_z;
 	}
 
-	int WorldRegion::GetHeight(LongVector2 block_pos, const bool require_surface) {
+	int WorldRegion::GetHeight(LongVector2 block_pos, const Heightmap heightmap) {
 		cube::Zone* zone;
 		IntVector2 local_block_pos;
 
