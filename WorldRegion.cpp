@@ -286,7 +286,6 @@ namespace cubewg {
 		int base_z = field->base_z;
 
 		cube::Block* blocc;
-		int best_position;
 
 		switch (heightmap) {
 		case Heightmap::WORLD_SURFACE:
@@ -295,7 +294,7 @@ namespace cubewg {
 			for (int zo = 1; zo < 64; zo++) {
 				blocc = zone->GetBlock(IntVector3(local_block_pos.x, local_block_pos.y, base_z + zo));
 
-				if (blocc->type == cube::Block::Air) {
+				if (!blocc || blocc->type == cube::Block::Air) {
 					return base_z + zo - 1;
 				}
 			}

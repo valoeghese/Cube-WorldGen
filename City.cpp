@@ -24,30 +24,22 @@ bool cubewg::City::Generate(WorldRegion& region, const IntVector2& zone_position
 
 			if (worley <= 0.025 && worley >= 0.02) {
 				generated = true;
-				int height = region.GetHeight(LongVector2(x, y), Heightmap::WORLD_SURFACE);
+				int height = region.GetHeight(LongVector2(x, y), Heightmap::WORLD_SURFACE) + 1;
 				const int wall_height = (worley <= 0.024 && worley >= 0.021) ? 11 : 14;
 
 				if (height != kNoPosition) {
-					cube::Block* abv_surface_block = region.GetBlock(LongVector3(x, y, height));
-
 					// TODO account for lava and trees
-					if (!abv_surface_block || abv_surface_block->type != cube::Block::Water) { // TODO when I change the GetHeight implementation alter this line accordingly
-						for (int zo = 0; zo < wall_height; zo++) {
-							region.SetBlock(LongVector3(x, y, height + zo), city_wall, to_remesh);
-						}
+					for (int zo = 0; zo < wall_height; zo++) {
+						region.SetBlock(LongVector3(x, y, height + zo), city_wall, to_remesh);
 					}
 				}
 			}
 			else if (worley < 0.02) {
 				generated = true;
-				int height = region.GetHeight(LongVector2(x, y), Heightmap::WORLD_SURFACE);
+				int height = region.GetHeight(LongVector2(x, y), Heightmap::WORLD_SURFACE) + 1;
 
 				if (height != kNoPosition) {
-					cube::Block* abv_surface_block = region.GetBlock(LongVector3(x, y, height));
-					
-					if (!abv_surface_block || abv_surface_block->type != cube::Block::Water) {
-						region.SetBlock(LongVector3(x, y, height - 1), pavement, to_remesh);
-					}
+					region.SetBlock(LongVector3(x, y, height - 1), pavement, to_remesh);
 				}
 			}
 		}
@@ -58,11 +50,11 @@ bool cubewg::City::Generate(WorldRegion& region, const IntVector2& zone_position
 
 	if (centre_worley < 0.018) {
 		generated = true;
-		int height = region.GetHeight(LongVector2(32, 32), Heightmap::WORLD_SURFACE);
+		int height = region.GetHeight(LongVector2(32, 32), Heightmap::WORLD_SURFACE) + 1;
 
 		cube::Block* abv_surface_block = region.GetBlock(LongVector3(32, 32, height));
 		
-		if (!abv_surface_block || region.GetBlock(LongVector3(32, 32, height))->type != cube::Block::Water) { // TODO when I change the GetHeight implementation alter this line accordingly
+		if (abv_surface_block) {
 			for (int xo = -10; xo <= 10; xo++) {
 				int local_x = xo + 32;
 
