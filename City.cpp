@@ -61,7 +61,7 @@ bool cubewg::City::Generate(WorldRegion& region, const IntVector2& zone_position
 		int height = region.GetHeight(LongVector2(32, 32), Heightmap::WORLD_SURFACE);
 
 		cube::Block* abv_surface_block = region.GetBlock(LongVector3(32, 32, height));
-
+		
 		if (!abv_surface_block || region.GetBlock(LongVector3(32, 32, height))->type != cube::Block::Water) { // TODO when I change the GetHeight implementation alter this line accordingly
 			for (int xo = -10; xo <= 10; xo++) {
 				int local_x = xo + 32;
