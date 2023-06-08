@@ -286,23 +286,52 @@ namespace cubewg {
 		int base_z = field->base_z;
 
 		cube::Block* blocc;
-		bool had_block = false;
+		int best_position;
 
-		for (int zo = 0; zo < 64; zo++) {
-			blocc = zone->GetBlock(IntVector3(local_block_pos.x, local_block_pos.y, base_z + zo));
+		switch (heightmap) {
+		case Heightmap::WORLD_SURFACE:
+			// First block with air above it is world surface.
+			// Start at 1 as cannot return below base_z
+			for (int zo = 1; zo < 64; zo++) {
+				blocc = zone->GetBlock(IntVector3(local_block_pos.x, local_block_pos.y, base_z + zo));
 
-			if (blocc) {
-				if (blocc->type == cube::Block::Air || blocc->type == cube::Block::Water || blocc->type == cube::Block::Lava) {
-					return (had_block || !require_surface) ? base_z + zo : cubewg::kNoPosition;
+				if (blocc->type == cube::Block::Air) {
+					return base_z + zo - 1;
 				}
-
-				had_block = true;
-			} else if (had_block) {
-				return base_z + zo;
 			}
-		}
 
-		return require_surface ? cubewg::kNoPosition : base_z;
+			// No block found
+			// Assume no position.
+			return cubewg::kNoPosition;
+		case Heightmap::MOTION_BLOCKING:
+		case Heightmap::OCEAN_FLOOR:
+			// Search from top to bottom.
+			for (int zo = 63; zo >= 0; zo--) {
+				blocc = zone->GetBlock(IntVector3(local_block_pos.x, local_block_pos.y, base_z + zo));
+
+				if (blocc) {
+					if (blocc->type != cube::Block::Air) {
+						switch (heightmap) {
+						case Heightmap::MOTION_BLOCKING:
+							return base_z + zo;
+						case Heightmap::OCEAN_FLOOR:
+							// Ocean floor goes through liquids.
+							if (blocc->type != cube::Block::Water && blocc->type != cube::Block::Lava) {
+								return base_z + zo;
+							}
+
+							break;
+						}
+					}
+				}
+			}
+
+			// No block found
+			// Assume heightmap is at the base position.
+			return base_z;
+		default:
+			return cubewg::kNoPosition;
+		}
 	}
 
 	void SetBlockInZone(cube::Zone* zone, IntVector3 local_block_pos, cube::Block block, std::set<cube::Zone*>& to_remesh) {

@@ -24,7 +24,7 @@ bool cubewg::City::Generate(WorldRegion& region, const IntVector2& zone_position
 
 			if (worley <= 0.025 && worley >= 0.02) {
 				generated = true;
-				int height = region.GetHeight(LongVector2(x, y), true);
+				int height = region.GetHeight(LongVector2(x, y), Heightmap::WORLD_SURFACE);
 				const int wall_height = (worley <= 0.024 && worley >= 0.021) ? 11 : 14;
 
 				if (height != kNoPosition) {
@@ -40,7 +40,7 @@ bool cubewg::City::Generate(WorldRegion& region, const IntVector2& zone_position
 			}
 			else if (worley < 0.02) {
 				generated = true;
-				int height = region.GetHeight(LongVector2(x, y), true);
+				int height = region.GetHeight(LongVector2(x, y), Heightmap::WORLD_SURFACE);
 
 				if (height != kNoPosition) {
 					cube::Block* abv_surface_block = region.GetBlock(LongVector3(x, y, height));
@@ -58,7 +58,7 @@ bool cubewg::City::Generate(WorldRegion& region, const IntVector2& zone_position
 
 	if (centre_worley < 0.018) {
 		generated = true;
-		int height = region.GetHeight(LongVector2(32, 32), true);
+		int height = region.GetHeight(LongVector2(32, 32), Heightmap::WORLD_SURFACE);
 
 		cube::Block* abv_surface_block = region.GetBlock(LongVector3(32, 32, height));
 

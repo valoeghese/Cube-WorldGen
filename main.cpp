@@ -104,10 +104,13 @@ namespace cubewg {
 				WorldRegion region(world);
 				LongVector3 position = BlockFromDots(cube::GetGame()->GetPlayer()->entity_data.position);
 
-				int height = region.GetHeight(LongVector2(position.x, position.y));
-				int height_surface_required = region.GetHeight(LongVector2(position.x, position.y), true);
+				int height_motion_blocking = region.GetHeight(LongVector2(position.x, position.y), Heightmap::MOTION_BLOCKING);
+				int height_world_surface = region.GetHeight(LongVector2(position.x, position.y), Heightmap::WORLD_SURFACE);
+				int height_ocean_floor = region.GetHeight(LongVector2(position.x, position.y), Heightmap::OCEAN_FLOOR);
 
-				std::wstring feedback = L"Height at your current position is " + std::to_wstring(height) + L" (Surface Required: " + std::to_wstring(height_surface_required) + L")" + LF;
+				std::wstring feedback = L"Heightmaps at your current position are (MB: " + std::to_wstring(height_motion_blocking)
+					+ L", WS: " + std::to_wstring(height_world_surface)
+					+ L", OF: " + std::to_wstring(height_ocean_floor) + L")" + LF;
 				cube::GetGame()->PrintMessage(feedback.c_str());
 
 				return 1;
