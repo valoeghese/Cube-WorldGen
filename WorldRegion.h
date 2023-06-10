@@ -23,9 +23,6 @@ namespace cubewg {
 	private:
 		cube::World* world;
 		cube::Zone* zone;
-		int* heightmap_world_surface;
-		int* heightmap_motion_blocking;
-		int* heightmap_ocean_floor;
 
 	public:
 		/* Generation for runtime/tests using world.

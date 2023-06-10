@@ -27,7 +27,6 @@ namespace cubewg {
 
 	// internal header stuff
 	void SetBlockInZone(cube::Zone* zone, IntVector3 local_block_pos, cube::Block block, std::set<cube::Zone*>& to_remesh);
-	int CalculateHeight(cube::Zone* zone, int x, int y, Heightmap heightmap);
 
 	// structs
 	struct ZoneBuffer {
@@ -209,27 +208,15 @@ namespace cubewg {
 	WorldRegion::WorldRegion(cube::World* world) {
 		this->world = world;
 		this->zone = nullptr;
-		this->heightmap_world_surface = nullptr;
-		this->heightmap_motion_blocking = nullptr;
-		this->heightmap_ocean_floor = nullptr;
 	}
 
 	WorldRegion::WorldRegion(cube::Zone* zone) {
 		this->world = nullptr;
 		this->zone = zone;
-		this->heightmap_world_surface = new int[cube::BLOCKS_PER_ZONE * cube::BLOCKS_PER_ZONE];
-		this->heightmap_motion_blocking = new int[cube::BLOCKS_PER_ZONE * cube::BLOCKS_PER_ZONE];
-		this->heightmap_ocean_floor = new int[cube::BLOCKS_PER_ZONE * cube::BLOCKS_PER_ZONE];
-
-		// TODO calculate heightmap values.
 	}
 
 	WorldRegion::~WorldRegion() {
-		if (this->zone) {
-			delete[] this->heightmap_world_surface;
-			delete[] this->heightmap_motion_blocking;
-			delete[] this->heightmap_ocean_floor;
-		}
+		// NO-OP
 	}
 
 	cube::Block* WorldRegion::GetBlock(LongVector3 block_pos) {
