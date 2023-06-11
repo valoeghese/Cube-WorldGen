@@ -209,8 +209,6 @@ namespace cubewg {
 		virtual void OnZoneGenerated(cube::Zone* zone) override {
 			WorldRegion region = WorldRegion(zone);
 
-			cube::Block* blocc;
-			bool hadblocc = false;
 			std::set<cube::Zone*> to_remesh;
 
 			WorldRegion::GenerateInZone(zone, to_remesh);
