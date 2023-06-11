@@ -1,5 +1,7 @@
 #include "City.h"
 
+#include <cmath>
+
 const int kCityGridScale = 2000;
 
 cubewg::City::City() : cities_grid(JitteredGrid(0, 0.2, kCityGridScale)) {
@@ -11,7 +13,17 @@ cubewg::City::~City() {
 }
 
 int cubewg::City::GenerateAt(WorldRegion& region, const IntVector3& origin, std::set<cube::Zone*>& to_remesh) {
-	cube::GetGame()->PrintMessage(L"City Structure does not support runtime generation as it too complex.");
+	JitteredPoint pos = cities_grid.FindNearestPoint(origin.x, origin.y);
+
+	cube::GetGame()->PrintMessage(L"City Data:\n");
+
+	std::wstring centre_msg = L"- Centre: (" + std::to_wstring(pos.x) + L", " + std::to_wstring(pos.y) + L")\n";
+	cube::GetGame()->PrintMessage(centre_msg.c_str());
+
+	long double dx = pos.x - origin.x;
+	long double dy = pos.y - origin.y;
+	std::wstring dist_msg = L"- Horizontal Distance:\n" + std::to_wstring(std::sqrt(dx * dx + dy * dy));
+	cube::GetGame()->PrintMessage(dist_msg.c_str());
 	return 0;
 }
 

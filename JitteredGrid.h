@@ -41,7 +41,7 @@ namespace cubewg {
 		*/
 		JitteredPoint FindNearestPoint(double x, double y);
 
-		/* Samples cellular noise using the points on this jittered grid. Uses euclidean squared distance.
+		/* Get the euclidean square distance to the nearest point on this jittered grid.
 		*/
 		double SqrDist2Nearest(double x, double y);
 

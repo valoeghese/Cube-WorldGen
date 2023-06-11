@@ -65,5 +65,8 @@ namespace cubewg {
 		/* Internal method called on zone generation.
 		*/
 		static void GenerateInZone(cube::Zone* zone, std::set<cube::Zone*>& to_remesh);
+		/* Internal method called to force-generate for debug.
+		*/
+		static int GenerateStructureAt(std::wstring structure, const LongVector3& position, std::set<cube::Zone*>& to_remesh);
 	};
 }

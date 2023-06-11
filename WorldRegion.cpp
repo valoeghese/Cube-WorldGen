@@ -148,6 +148,20 @@ namespace cubewg {
 		}
 	}
 
+	int WorldRegion::GenerateStructureAt(std::wstring structure, const LongVector3 & position, std::set<cube::Zone*>& to_remesh)
+	{
+		Structure* structure_obj = named_structures->at(structure);
+
+		if (!structure_obj) {
+			cube::GetGame()->PrintMessage((L"Unknown Structure " + structure).c_str());
+			return 0;
+		}
+
+		WorldRegion region(cube::GetGame()->world);
+		
+		return structure_obj->GenerateAt(region, IntVector3(position.x, position.y, position.z), to_remesh);
+	}
+
 	void SetBlockInBuffer(cube::Zone* parent, int dx, int dy, IntVector3 local_block_pos, cube::Block block) {
 		if (!zoneBuffers) return;
 

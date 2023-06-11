@@ -11,51 +11,9 @@
 // For example: #include "src/hooks/a_hook.h" 
 
 namespace cubewg {
-	cube::Block blue_leaves;
-	cube::Block log;
-	cube::Block debug_zone_border;
-
 	/* Mod class containing all the functions for the mod.
 	*/
 	class WorldGenMod : GenericMod {
-		void GenerateTree(WorldRegion& region, int x, int y, int z, std::set<cube::Zone*>& to_remesh) {
-			const int kHeight = 10;
-
-			// generate trunk
-			for (int i = 0; i < kHeight - 4; i++) {
-				region.SetBlock(LongVector3(x, y, z + i), log, to_remesh);
-			}
-
-			// generate leaves
-			for (int i = kHeight - 4; i < kHeight; i++) {
-				int total_z = z + i;
-
-				if (i == kHeight - 1) {
-					for (int xo = -1; xo <= 1; xo++) {
-						int total_x = x + xo;
-
-						for (int yo = -1; yo <= 1; yo++) {
-							int total_y = y + yo;
-
-							if (xo == 0 || yo == 0) { // not corners
-								region.SetBlock(LongVector3(total_x, total_y, total_z), blue_leaves, to_remesh);
-							}
-						}
-					}
-				} else {
-					for (int xo = -2; xo <= 2; xo++) {
-						int totalX = x + xo;
-
-						for (int yo = -2; yo <= 2; yo++) {
-							int totalY = y + yo;
-
-							region.SetBlock(LongVector3(totalX, totalY, total_z), blue_leaves, to_remesh);
-						}
-					}
-				}
-			}
-		}
-
 		LongVector3 BlockFromDots(LongVector3 dots) {
 			return LongVector3
 			(
@@ -72,14 +30,16 @@ namespace cubewg {
 		virtual int OnChat(std::wstring* message) override {
 			bool allpos = *message == L".pos";
 
-			if (*message == L".gentree") {
+			if (message->substr(0, 9) == L".generate") {
 				try {
 					LongVector3 playerPos = BlockFromDots(cube::GetGame()->GetPlayer()->entity_data.position);
 					std::set<cube::Zone*> chunks_to_remesh;
 
-					WorldRegion region = WorldRegion(cube::GetGame()->world);
+					int feedback = WorldRegion::GenerateStructureAt(message->substr(9), playerPos, chunks_to_remesh);
 
-					GenerateTree(region, playerPos.x, playerPos.y, playerPos.z, chunks_to_remesh);
+					if (feedback) {
+						cube::GetGame()->PrintMessage((L"Error Code: " + std::to_wstring(feedback)).c_str());
+					}
 
 					std::wstring w = std::to_wstring(chunks_to_remesh.size()) + LF;
 					cube::GetGame()->PrintMessage((L"Remeshing N Chunks: " + w).c_str());
@@ -137,22 +97,6 @@ namespace cubewg {
 					cube::GetGame()->PrintMessage(feedback.c_str());
 				}
 
-				/*if (allpos || *message == L".pos worley") {
-					cube::Zone* zone = cube::GetGame()->world->GetCurrentZone();
-					long long int x = pymod(position.x, cube::BLOCKS_PER_ZONE);
-					long long int y = pymod(position.y, cube::BLOCKS_PER_ZONE);
-
-					double sample_x = (zone->position.x * cube::BLOCKS_PER_ZONE + x) * 0.001;
-					double sample_y = (zone->position.y * cube::BLOCKS_PER_ZONE + y) * 0.001;
-
-					double worley = citiesGrid.Worley(sample_x, sample_y);
-					unsigned char grey = worley > 1 ? 255 : (unsigned char)(worley * 255.0);
-
-					feedback = L"The current column's worley is " + std::to_wstring(worley) + L" (greyness: " + std::to_wstring(grey)
-						+ L", Sample: [" + std::to_wstring(sample_x) + L", " + std::to_wstring(sample_y) + L"])" + LF;
-					cube::GetGame()->PrintMessage(feedback.c_str());
-				}
-				*/
 				if (allpos || *message == L".pos read") {
 					cube::Block* blocc = cube::GetGame()->world->GetBlock(position);
 
@@ -184,20 +128,6 @@ namespace cubewg {
 		*/
 		virtual void Initialize() override {
 			WorldRegion::Initialise();
-
-			blue_leaves.red = 0;
-			blue_leaves.green = 30;
-			blue_leaves.blue = 140;
-			blue_leaves.type = cube::Block::Leaves;
-			blue_leaves.breakable = true;
-
-			log.red = 130;
-			log.green = 90;
-			log.blue = 0;
-			log.type = cube::Block::Tree;
-			log.breakable = false;
-
-			debug_zone_border = BlockOf(255, 255, 0, cube::Block::Solid, true);
 
 			City* city = new City;
 			WorldRegion::AddStructure(L"city", city);

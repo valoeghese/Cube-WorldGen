@@ -2,17 +2,14 @@
 
 #include "WorldRegion.h"
 #include "Structure.h"
-#include "JitteredGrid.h"
 
 namespace cubewg {
-	class City : public Structure {
+	class DebugTree : public Structure {
 	private:
-		JitteredGrid cities_grid;
-		cube::Block city_wall;
-		cube::Block pavement;
+		cube::Block blue_leaves;
+		cube::Block log;
 	public:
-		City();
-		~City();
+		DebugTree();
 
 		int GenerateAt(WorldRegion& region, const IntVector3& origin, std::set<cube::Zone*>& to_remesh) override;
 		bool Generate(WorldRegion& region, const IntVector2& zone_position, std::set<cube::Zone*>& to_remesh) override;
