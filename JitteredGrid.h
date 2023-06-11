@@ -23,11 +23,15 @@ namespace cubewg {
 	class JitteredGrid {
 	private:
 		int64_t seed;
+		// How much to move points on the grid towards the average.
 		double relaxation;
+		// Scale of the grid. That is, how much to scale input/output.
+		// Inputs are scaled DOWN by this amount and outputs are then scaled UP.
+		double scale;
 	public:
-		JitteredGrid();
 		JitteredGrid(const int64_t seed);
 		JitteredGrid(const int64_t seed, const double relaxation);
+		JitteredGrid(const int64_t seed, const double relaxation, const double scale);
 
 		/* Samples the point on the jittered grid at the given coordinates. The jittered point is guaranteed to fall within this grid space.
 		*/

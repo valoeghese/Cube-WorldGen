@@ -1,9 +1,8 @@
 #include "City.h"
 
-cubewg::City::City() {
+cubewg::City::City() : cities_grid(JitteredGrid(0, 0.2)) {
 	city_wall = BlockOf(130, 150, 160);
 	pavement = BlockOf(90, 90, 90, cube::Block::Ground);
-	cities_grid = JitteredGrid(0, 0.2);
 }
 
 cubewg::City::~City() {

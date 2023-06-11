@@ -9,19 +9,22 @@ const int64_t kMaxInt64 = std::numeric_limits<int64_t>::max();
 
 // constructors
 
-cubewg::JitteredGrid::JitteredGrid() {
-	this->seed = 0;
-	this->relaxation = 0;
-}
-
 cubewg::JitteredGrid::JitteredGrid(const int64_t seed) {
 	this->seed = seed;
 	this->relaxation = 0;
+	this->scale = 1;
 }
 
 cubewg::JitteredGrid::JitteredGrid(const int64_t seed, const double relaxation) {
 	this->seed = seed;
 	this->relaxation = relaxation;
+	this->scale = 1;
+}
+
+cubewg::JitteredGrid::JitteredGrid(const int64_t seed, const double relaxation, const double scale) {
+	this->seed = seed;
+	this->relaxation = relaxation;
+	this->scale = scale;
 }
 
 // methods
@@ -58,6 +61,10 @@ cubewg::JitteredPoint cubewg::JitteredGrid::SampleGrid(int64_t grid_x, int64_t g
 }
 
 cubewg::JitteredPoint cubewg::JitteredGrid::SampleVoronoi(double x, double y) {
+	// Scale down inputs
+	x /= this->scale;
+	y /= this->scale;
+
 	double unrelaxation = 1.0 - this->relaxation;
 
 	// coordinates of the grid area in the centre of the search. I.e. the grid area the point is actually in.
@@ -90,10 +97,15 @@ cubewg::JitteredPoint cubewg::JitteredGrid::SampleVoronoi(double x, double y) {
 		}
 	}
 
-	return JitteredPoint(result_x, result_y, Random(this->seed + 2, result_grid_x, result_grid_y));
+	// Scale up output position
+	return JitteredPoint(result_x * this->scale, result_y * this->scale, Random(this->seed + 2, result_grid_x, result_grid_y));
 }
 
 double cubewg::JitteredGrid::Worley(double x, double y) {
+	// Scale down inputs
+	x /= this->scale;
+	y /= this->scale;
+
 	double unrelaxation = 1.0 - this->relaxation;
 
 	// coordinates of the grid area in the centre of the search. I.e. the grid area the point is actually in.
@@ -120,10 +132,17 @@ double cubewg::JitteredGrid::Worley(double x, double y) {
 		}
 	}
 
-	return result_dist;
+	// Scale up output
+	// Uses squared distance so to scale up value a by factor k for expression a^2, we must multiply by square
+	// (a * k) ^2 = a^2 * k^2
+	return result_dist * (this->scale * this->scale);
 }
 
 double cubewg::JitteredGrid::Worley2(double x, double y) {
+	// Scale down inputs
+	x /= this->scale;
+	y /= this->scale;
+
 	double unrelaxation = 1.0 - this->relaxation;
 
 	// coordinates of the grid area in the centre of the search. I.e. the grid area the point is actually in.
@@ -152,5 +171,10 @@ double cubewg::JitteredGrid::Worley2(double x, double y) {
 		}
 	}
 
-	return result_dist_2 - result_dist;
+	double result = result_dist_2 - result_dist;
+
+	// Scale up output
+	// Uses squared distance so to scale up value a by factor k for expression a^2, we must multiply by square
+	// (a * k) ^2 = a^2 * k^2
+	return result * (this->scale * this->scale);
 }
