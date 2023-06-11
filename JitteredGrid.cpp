@@ -60,7 +60,7 @@ cubewg::JitteredPoint cubewg::JitteredGrid::SampleGrid(int64_t grid_x, int64_t g
 		Random(this->seed + 2, grid_x, grid_y));
 }
 
-cubewg::JitteredPoint cubewg::JitteredGrid::SampleVoronoi(double x, double y) {
+cubewg::JitteredPoint cubewg::JitteredGrid::FindNearestPoint(double x, double y) {
 	// Scale down inputs
 	x /= this->scale;
 	y /= this->scale;
@@ -101,11 +101,11 @@ cubewg::JitteredPoint cubewg::JitteredGrid::SampleVoronoi(double x, double y) {
 	return JitteredPoint(result_x * this->scale, result_y * this->scale, Random(this->seed + 2, result_grid_x, result_grid_y));
 }
 
-double cubewg::JitteredGrid::Worley(double x, double y) {
+double cubewg::JitteredGrid::SqrDist2Nearest(double x, double y) {
 	// Scale down inputs
 	x /= this->scale;
 	y /= this->scale;
-
+	
 	double unrelaxation = 1.0 - this->relaxation;
 
 	// coordinates of the grid area in the centre of the search. I.e. the grid area the point is actually in.

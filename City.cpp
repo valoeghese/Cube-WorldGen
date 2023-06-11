@@ -1,6 +1,8 @@
 #include "City.h"
 
-cubewg::City::City() : cities_grid(JitteredGrid(0, 0.2)) {
+const int kCityGridScale = 2000;
+
+cubewg::City::City() : cities_grid(JitteredGrid(0, 0.2, kCityGridScale)) {
 	city_wall = BlockOf(130, 150, 160);
 	pavement = BlockOf(90, 90, 90, cube::Block::Ground);
 }
@@ -16,15 +18,15 @@ int cubewg::City::GenerateAt(WorldRegion& region, const IntVector3& origin, std:
 bool cubewg::City::Generate(WorldRegion& region, const IntVector2& zone_position, std::set<cube::Zone*>& to_remesh) {
 	bool generated = false;
 
-	// generate city walls
+	// generate city walls and pavement
 	for (int x = 0; x < cube::BLOCKS_PER_ZONE; x++) {
 		for (int y = 0; y < cube::BLOCKS_PER_ZONE; y++) {
-			double worley = cities_grid.Worley((zone_position.x * cube::BLOCKS_PER_ZONE + x) * 0.0005, (zone_position.y * cube::BLOCKS_PER_ZONE + y) * 0.0005);
+			double sqr_dist_2_city_centre = cities_grid.SqrDist2Nearest((zone_position.x * cube::BLOCKS_PER_ZONE + x), (zone_position.y * cube::BLOCKS_PER_ZONE + y));
 
-			if (worley <= 0.025 && worley >= 0.02) {
+			if (sqr_dist_2_city_centre <= 316 * 316 && sqr_dist_2_city_centre >= 282 * 282) {
 				generated = true;
 				int height = region.GetHeight(LongVector2(x, y), Heightmap::WORLD_SURFACE) + 1;
-				const int wall_height = (worley <= 0.024 && worley >= 0.021) ? 11 : 14;
+				const int wall_height = (sqr_dist_2_city_centre <= 314 * 314 && sqr_dist_2_city_centre >= 284 * 284) ? 11 : 14;
 
 				if (height != kNoPosition) {
 					// TODO account for lava and trees
@@ -33,7 +35,7 @@ bool cubewg::City::Generate(WorldRegion& region, const IntVector2& zone_position
 					}
 				}
 			}
-			else if (worley < 0.02) {
+			else if (sqr_dist_2_city_centre < 282 * 282) {
 				generated = true;
 				int height = region.GetHeight(LongVector2(x, y), Heightmap::WORLD_SURFACE) + 1;
 
@@ -45,9 +47,9 @@ bool cubewg::City::Generate(WorldRegion& region, const IntVector2& zone_position
 	}
 
 	// generate buildings
-	double centre_worley = cities_grid.Worley((zone_position.x * cube::BLOCKS_PER_ZONE + 32) * 0.0005, (zone_position.y * cube::BLOCKS_PER_ZONE + 32) * 0.0005);
+	double zone_centre_dist_to_city_centre = cities_grid.SqrDist2Nearest((zone_position.x * cube::BLOCKS_PER_ZONE + 32), (zone_position.y * cube::BLOCKS_PER_ZONE + 32));
 
-	if (centre_worley < 0.018) {
+	if (zone_centre_dist_to_city_centre < 269 * 269) {
 		generated = true;
 		int height = region.GetHeight(LongVector2(32, 32), Heightmap::WORLD_SURFACE) + 1;
 

@@ -219,14 +219,14 @@ namespace cubewg {
 				zone->chunk.Remesh();
 			}
 
-			for (int x = 0; x < 64; x++) {
+			/*for (int x = 0; x < 64; x++) {
 				for (int y = 0; y < 64; y++) {
 					int field_index = x * cube::BLOCKS_PER_ZONE + y;
 					cube::Field* field = &zone->fields[field_index];
 					field->base_z = 10;
 				}
 			}
-			zone->chunk.Remesh();
+			zone->chunk.Remesh();*/
 		}
 
 		virtual void OnZoneDestroy(cube::Zone* zone) override {

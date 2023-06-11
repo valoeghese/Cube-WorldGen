@@ -39,11 +39,11 @@ namespace cubewg {
 
 		/* Samples the nearest jittered point to the given coordinates.
 		*/
-		JitteredPoint SampleVoronoi(double x, double y);
+		JitteredPoint FindNearestPoint(double x, double y);
 
 		/* Samples cellular noise using the points on this jittered grid. Uses euclidean squared distance.
 		*/
-		double Worley(double x, double y);
+		double SqrDist2Nearest(double x, double y);
 
 		/* Samples 'd2-d1' type cellular noise using the points on this jittered grid. Uses euclidean squared distance.
 		*/
