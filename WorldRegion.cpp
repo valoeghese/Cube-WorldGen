@@ -168,7 +168,7 @@ namespace cubewg {
 		} else {
 			// create value
 			ZoneBufferArr8 new_val;
-			cube::GetGame()->PrintMessage(L"Creating Zone Buffer\n");
+			//cube::GetGame()->PrintMessage(L"Creating Zone Buffer\n");
 			new_val.neighbours[index].to_paste = new std::unordered_map<IntVector3, cube::Block>;
 			(*new_val.neighbours[index].to_paste)[local_block_pos] = block;
 
