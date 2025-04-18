@@ -13,5 +13,5 @@ add_library (NewAdventures SHARED
 	"City.cpp"
 	"DebugTree.h"
 	"DebugTree.cpp"
-)
+  )
 target_link_libraries (NewAdventures LINK_PUBLIC CWSDK)

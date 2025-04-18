@@ -57,6 +57,7 @@ namespace cubewg {
 					std::string s = std::string(e.what());
 					std::wstring ws(s.begin(), s.end());
 					cube::GetGame()->PrintMessage(ws.c_str());
+					cube::GetGame()->PrintMessage(L"\n");
 				}
 			} else if (*message == L".height") {
 				// get the world the player is in
@@ -129,8 +130,10 @@ namespace cubewg {
 		virtual void Initialize() override {
 			WorldRegion::Initialise();
 
-			City* city = new City;
-			WorldRegion::AddStructure(L"city", city);
+			if (0) {
+				//City* city = new City;
+				//WorldRegion::AddStructure(L"city", city);
+			}
 			return;
 		}
 
@@ -151,7 +154,7 @@ namespace cubewg {
 				for (int y = 0; y < 64; y++) {
 					int field_index = x * cube::BLOCKS_PER_ZONE + y;
 					cube::Field* field = &zone->fields[field_index];
-					field->base_z = 10;
+					//field->base_z = 10;
 				}
 			}
 			zone->chunk.Remesh();*/

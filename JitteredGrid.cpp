@@ -27,7 +27,7 @@ cubewg::JitteredGrid::JitteredGrid(const int64_t seed, const double relaxation, 
 	this->scale = scale;
 }
 
-// methods
+// private functions
 
 int64_t Random(int64_t seed, int64_t x, int64_t y) {
 	// constants from MMIX, however the exact rng implementation differs
@@ -51,6 +51,8 @@ double SqrDist(double x0, double y0, double x1, double y1) {
 	double dy = y1 - y0;
 	return dx * dx + dy * dy;
 }
+
+// methods
 
 cubewg::JitteredPoint cubewg::JitteredGrid::SampleGrid(int64_t grid_x, int64_t grid_y) {
 	double unrelaxation = 1.0 - this->relaxation; // the "opposite" of the relaxation in weighting the values

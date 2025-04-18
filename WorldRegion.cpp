@@ -2,6 +2,9 @@
 
 #include <mutex>
 #include <list>
+#include <Windows.h>
+
+#define NULLABLE
 
 namespace std {
 	template <>
@@ -21,52 +24,73 @@ namespace std {
 }
 
 namespace cubewg {
-	// the list of stuff to generate! We use a linked list rather than std::vector to ensure fast addition and iteration. And we don't need random access.
-	std::list<Structure*>* structures;
-	std::unordered_map<std::wstring, Structure*>* named_structures;
-
-	// internal header stuff
-	void SetBlockInZone(cube::Zone* zone, IntVector3 local_block_pos, cube::Block block, std::set<cube::Zone*>& to_remesh);
+	typedef std::unordered_map<IntVector3, cube::Block> CubeBuffer;
 
 	// structs
-	struct ZoneBuffer {
-		std::unordered_map<IntVector3, cube::Block>* to_paste = nullptr;
+	struct NeighbourBuffers {
+		std::unique_ptr<CubeBuffer> neighbours[8] = { nullptr };
+
+		static int BufferArrLoc(int x_dif, int y_dif)
+		{
+			switch (y_dif) {
+			case -1:
+				return 1 + x_dif; // 0, 1, 2
+			case 1:
+				return 3 + 1 + x_dif; // 3, 4, 5
+			case 0:
+				return x_dif > 0 ? 6 : 7; // 6, 7
+			default:
+				throw std::invalid_argument("Bad Coordinates");
+			}
+		}
+
+		/* Get the location in an array of buffers for the x_dif and y_dif (dx and dy from the parent to the zone to write in)
+		* @param x_dif the x offset.
+		* @param y_dif the y offset.
+		* @param create whether to create a new buffer if it doesn't exist.
+		*/
+		NULLABLE std::unique_ptr<CubeBuffer> & GetBuffer(int x_dif, int y_dif, bool create)
+		{
+			int const arrLoc = BufferArrLoc(x_dif, y_dif);
+
+			if (create && !neighbours[arrLoc]) {
+				neighbours[arrLoc] = std::make_unique<CubeBuffer>();
+			}
+
+			return neighbours[arrLoc];
+		}
+
+		void Delete(int x_dif, int y_dif) {
+			int const arrLoc = BufferArrLoc(x_dif, y_dif);
+
+			if (neighbours[arrLoc]) {
+				neighbours[arrLoc].reset(); // set to nullptr and delete memory
+			}
+		}
 	};
 
-	struct ZoneBufferArr8 {
-		ZoneBuffer neighbours[8];
-	};
+	// the list of stuff to generate! We use a linked list rather than std::vector to ensure fast addition and iteration. And we don't need random access.
+	std::list<Structure*> *structures;
+	std::unordered_map<std::wstring, Structure*> *named_structures;
 
-	// Map from the owner zone to buffers to paste in the region
-	std::unordered_map<IntVector2, ZoneBufferArr8>* zoneBuffers;
+	// Map from the owner zone to buffers to paste in neighbouring regions
+	std::unordered_map<IntVector2, NeighbourBuffers>* zoneBuffers;
+	std::recursive_mutex *mut;
 
+	// internal header stuff
+	void SetBlockInZone(cube::Zone *zone, IntVector3 local_block_pos, cube::Block block, std::set<cube::Zone*> &to_remesh);
+	
 	void WorldRegion::Initialise() {
 		// iirc there were runtime crashes if I didn't delay initialisation. Hence, pointers.
-		zoneBuffers = new std::unordered_map<IntVector2, ZoneBufferArr8>;
+		zoneBuffers = new std::unordered_map<IntVector2, NeighbourBuffers>;
 		structures = new std::list<Structure*>;
 		named_structures = new std::unordered_map<std::wstring, Structure*>;
-	}
-
-	/* Get the location in an array of buffers for the x_dif and y_dif (dx and dy from the parent to the zone to write in)
-	*/
-	int BufferArrLoc(int x_dif, int y_dif) {
-		switch (y_dif) {
-		case -1:
-			return 1 + x_dif; // 0, 1, 2
-		case 1:
-			return 3 + 1 + x_dif; // 3, 4, 5
-		case 0:
-			return x_dif > 0 ? 6 : 7; // 6, 7
-		default:
-			throw std::invalid_argument("Bad Coordinates");
-		}
+		mut = new std::recursive_mutex;
 	}
 
 	// Cleans up the memory here
 	// Please don't have memory leaks please don't have memory leaks
 	// I hate memory management
-
-	std::mutex mut;
 
 	void WorldRegion::AddStructure(std::wstring id, cubewg::Structure* structure) {
 		(*named_structures)[id] = structure;
@@ -76,31 +100,21 @@ namespace cubewg {
 	void WorldRegion::CleanUpBuffers(IntVector2 zone_pos) {
 		if (!zoneBuffers) return;
 
-		mut.lock(); // lock
+		// Lock mutex (Causes crash?)
+		mut->lock();
+		mut->unlock();
 
-		std::unordered_map<IntVector2, ZoneBufferArr8>::iterator bufs = zoneBuffers->find(zone_pos);
+		std::unordered_map<IntVector2, NeighbourBuffers>::iterator bufs = zoneBuffers->find(zone_pos);
 		
 		if (bufs != zoneBuffers->end()) {
-			ZoneBufferArr8& buffer_collection = bufs->second;
-			
-			for (ZoneBuffer& zone_buffer : buffer_collection.neighbours) {
-				if (zone_buffer.to_paste) {
-					//cube::GetGame()->PrintMessage(L"Cleaning.\n");
-					delete zone_buffer.to_paste;
-					zone_buffer.to_paste = nullptr;
-				}
-			}
-
-			zoneBuffers->erase(zone_pos);
+			zoneBuffers->erase(zone_pos);  // The unique_ptrs in NeighbourBuffers will be automatically cleaned up when erased
 		}
-
-		mut.unlock();
 	}
 
 	void WorldRegion::GenerateInZone(cube::Zone* zone, std::set<cube::Zone*>& to_remesh) {
 		if (!zoneBuffers) return;
 
-		mut.lock(); // lock
+		//mut.lock(); // lock
 
 		int base_x = zone->position.x;
 		int base_y = zone->position.y;
@@ -112,17 +126,13 @@ namespace cubewg {
 
 				IntVector2 search_location(base_x + dx, base_y + dy);
 
-				std::unordered_map<IntVector2, ZoneBufferArr8>::iterator bufs = zoneBuffers->find(search_location);
+				std::unordered_map<IntVector2, NeighbourBuffers>::iterator bufs = zoneBuffers->find(search_location);
 
 				if (bufs != zoneBuffers->end()) {
-					ZoneBufferArr8& buffer_collection = bufs->second;
+					NeighbourBuffers& buffer_collection = bufs->second;
 
 					// reverse of dx and dy to get the relative coords of this zone from the buffer's parent zone
-					int index = BufferArrLoc(-dx, -dy);
-					//cube::GetGame()->PrintMessage(L"Gonna look in index ");
-					//cube::GetGame()->PrintMessage(std::to_wstring(index).c_str());
-					//cube::GetGame()->PrintMessage(L"\n");
-					std::unordered_map<IntVector3, cube::Block>* to_paste = buffer_collection.neighbours[index].to_paste;
+					std::unique_ptr<CubeBuffer>& to_paste = buffer_collection.GetBuffer(-dx, -dy, false);
 
 					if (to_paste) {
 						//cube::GetGame()->PrintMessage(L"Placing ");
@@ -132,14 +142,13 @@ namespace cubewg {
 							SetBlockInZone(zone, it->first, it->second, to_remesh);
 						}
 
-						delete to_paste;
-						buffer_collection.neighbours[index].to_paste = nullptr;
+						buffer_collection.Delete(-dx, -dy);
 					}
 				}
 			}
 		}
 
-		mut.unlock();
+		//mut->unlock();
 
 		WorldRegion region(zone);
 
@@ -162,48 +171,69 @@ namespace cubewg {
 		return structure_obj->GenerateAt(region, IntVector3(position.x, position.y, position.z), to_remesh);
 	}
 
-	void SetBlockInBuffer(cube::Zone* parent, int dx, int dy, IntVector3 local_block_pos, cube::Block block) {
+	// Helper Functions for Buffers
+
+	static void SetBlockInBuffer(cube::Zone* parent, int dx, int dy, IntVector3 local_block_pos, cube::Block block) {
 		if (!zoneBuffers) return;
 
-		std::unordered_map<IntVector2, ZoneBufferArr8>::iterator bufs = zoneBuffers->find(parent->position);
-		int index = BufferArrLoc(dx, dy);
+		std::unordered_map<IntVector2, NeighbourBuffers>::iterator bufs = zoneBuffers->find(parent->position);
 
 		// I still hate memory management
 		if (bufs != zoneBuffers->end()) {
-			ZoneBufferArr8& buffer_collection = bufs->second;
-
-			// initialise if not yet
-			if (!buffer_collection.neighbours[index].to_paste) {
-				buffer_collection.neighbours[index].to_paste = new std::unordered_map<IntVector3, cube::Block>;
-			}
+			NeighbourBuffers& buffer_collection = bufs->second;
 
 			// add the block
-			(*buffer_collection.neighbours[index].to_paste)[local_block_pos] = block;
+			(*buffer_collection.GetBuffer(dx, dy, true))[local_block_pos] = block;
 		} else {
 			// create value
-			ZoneBufferArr8 new_val;
-			//cube::GetGame()->PrintMessage(L"Creating Zone Buffer\n");
-			new_val.neighbours[index].to_paste = new std::unordered_map<IntVector3, cube::Block>;
-			(*new_val.neighbours[index].to_paste)[local_block_pos] = block;
+			NeighbourBuffers new_val;
+			(*new_val.GetBuffer(dx, dy, true))[local_block_pos] = block;
 
-			(*zoneBuffers)[parent->position] = new_val;
+			(*zoneBuffers)[parent->position] = std::move(new_val);
+		}
+	}
+
+	static void SetBlockInZone(cube::Zone* zone, IntVector3 local_block_pos, cube::Block block, std::set<cube::Zone*>& to_remesh) {
+		zone->SetBlock(local_block_pos, block, false);
+		to_remesh.insert(zone);
+
+		// make sure neighbouring zones are refreshed if they are loaded
+		cube::World* world = zone->world;
+		IntVector2 zone_pos = zone->position;
+
+		if (local_block_pos.x == 0) {
+			cube::Zone* zone = world->GetZone(IntVector2(zone_pos.x - 1, zone_pos.y));
+			if (zone) to_remesh.insert(zone);
+		}
+		else if (local_block_pos.x == cube::BLOCKS_PER_ZONE - 1) {
+			cube::Zone* zone = world->GetZone(IntVector2(zone_pos.x + 1, zone_pos.y));
+			if (zone) to_remesh.insert(zone);
+		}
+
+		if (local_block_pos.y == 0) {
+			cube::Zone* zone = world->GetZone(IntVector2(zone_pos.x, zone_pos.y - 1));
+			if (zone) to_remesh.insert(zone);
+		}
+		else if (local_block_pos.y == cube::BLOCKS_PER_ZONE - 1) {
+			cube::Zone* zone = world->GetZone(IntVector2(zone_pos.x, zone_pos.y + 1));
+			if (zone) to_remesh.insert(zone);
 		}
 	}
 
 	// conversions
 
 	// modulo x and y by blocks in each zone (64x64)
-	IntVector3 ToLocalBlockPos(LongVector3 block_pos) {
+	static IntVector3 ToLocalBlockPos(LongVector3 block_pos) {
 		return IntVector3(pymod(block_pos.x, cube::BLOCKS_PER_ZONE), pymod(block_pos.y, cube::BLOCKS_PER_ZONE), block_pos.z);
 	}
 
-	IntVector2 ToLocalBlockPos(LongVector2 block_pos) {
+	static IntVector2 ToLocalBlockPos(LongVector2 block_pos) {
 		return IntVector2(pymod(block_pos.x, cube::BLOCKS_PER_ZONE), pymod(block_pos.y, cube::BLOCKS_PER_ZONE));
 	}
 
 	// if you can assume it is already
 
-	IntVector3 AsLocalBlockPos(LongVector3 block_pos, const bool restrict_to_zone = true) {
+	static IntVector3 AsLocalBlockPos(LongVector3 block_pos, const bool restrict_to_zone = true) {
 		if (restrict_to_zone && (block_pos.x < 0 || block_pos.y < 0 || block_pos.y >= cube::BLOCKS_PER_ZONE || block_pos.x >= cube::BLOCKS_PER_ZONE)) {
 			throw std::invalid_argument("Block Positions are outside of the restricted zone.");
 		}
@@ -211,7 +241,7 @@ namespace cubewg {
 		return IntVector3(block_pos.x, block_pos.y, block_pos.z);
 	}
 
-	IntVector2 AsLocalBlockPos(LongVector2 block_pos, const bool restrict_to_zone = true) {
+	static IntVector2 AsLocalBlockPos(LongVector2 block_pos, const bool restrict_to_zone = true) {
 		if (restrict_to_zone && (block_pos.x < 0 || block_pos.y < 0 || block_pos.y >= cube::BLOCKS_PER_ZONE || block_pos.x >= cube::BLOCKS_PER_ZONE)) {
 			throw std::invalid_argument("Block Positions are outside of the restricted zone.");
 		}
@@ -336,31 +366,6 @@ namespace cubewg {
 		}
 	}
 
-	void SetBlockInZone(cube::Zone* zone, IntVector3 local_block_pos, cube::Block block, std::set<cube::Zone*>& to_remesh) {
-		zone->SetBlock(local_block_pos, block, false);
-		to_remesh.insert(zone);
-
-		// make sure neighbouring zones are refreshed if they are loaded
-		cube::World* world = zone->world;
-		IntVector2 zone_pos = zone->position;
-
-		if (local_block_pos.x == 0) {
-			cube::Zone* zone = world->GetZone(IntVector2(zone_pos.x - 1, zone_pos.y));
-			if (zone) to_remesh.insert(zone);
-		} else if (local_block_pos.x == cube::BLOCKS_PER_ZONE - 1) {
-			cube::Zone* zone = world->GetZone(IntVector2(zone_pos.x + 1, zone_pos.y));
-			if (zone) to_remesh.insert(zone);
-		}
-
-		if (local_block_pos.y == 0) {
-			cube::Zone* zone = world->GetZone(IntVector2(zone_pos.x, zone_pos.y - 1));
-			if (zone) to_remesh.insert(zone);
-		} else if (local_block_pos.y == cube::BLOCKS_PER_ZONE - 1) {
-			cube::Zone* zone = world->GetZone(IntVector2(zone_pos.x, zone_pos.y + 1));
-			if (zone) to_remesh.insert(zone);
-		}
-	}
-
 	void WorldRegion::SetBlock(LongVector3 block_pos, cube::Block block, std::set<cube::Zone*>& to_remesh) {
 		if (this->world) {
 			this->world->SetBlock(block_pos, block, false);
@@ -409,7 +414,7 @@ namespace cubewg {
 				SetBlockInZone(this->zone, AsLocalBlockPos(block_pos), block, to_remesh);
 			}
 			else {
-				IntVector2 zone_pos = this->zone->position;
+				/*IntVector2 zone_pos = this->zone->position;
 				mut.lock();
 				cube::Zone* zone = this->zone->world->GetZone(zone_pos.x + dx, zone_pos.y + dy);
 
@@ -419,7 +424,7 @@ namespace cubewg {
 				} else {
 					SetBlockInBuffer(this->zone, dx, dy, ToLocalBlockPos(block_pos), block);
 					mut.unlock();
-				}
+				}*/
 			}
 		}
 	}
