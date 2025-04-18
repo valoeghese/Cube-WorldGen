@@ -51,6 +51,10 @@ namespace cubewg {
 
 		void SetBlock(LongVector3 block_pos, cube::Block block, std::set<cube::Zone*>& to_remesh);
 
+		/* Get the centre zone. Must provide a block pos in the centre for world-based world regions (i'll modify this in the future).
+		*/
+		cube::Zone* GetZone(LongVector2 block_pos);
+
 		// static methods
 		/* Add a structure to be generated in the world.
 		*/

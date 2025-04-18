@@ -14,12 +14,21 @@ namespace cubewg {
 	/* Mod class containing all the functions for the mod.
 	*/
 	class WorldGenMod : GenericMod {
-		LongVector3 BlockFromDots(LongVector3 dots) {
+		static LongVector3 BlockFromDots(LongVector3 dots) {
 			return LongVector3
 			(
 				pydiv(dots.x, cube::DOTS_PER_BLOCK),
 				pydiv(dots.y, cube::DOTS_PER_BLOCK),
 				pydiv(dots.z, cube::DOTS_PER_BLOCK)
+			);
+		}
+
+		static LongVector2 ZoneFromBlock(LongVector3 blocks) {
+			return LongVector2
+			(
+				pydiv(blocks.x, cube::BLOCKS_PER_ZONE),
+				pydiv(blocks.y, cube::BLOCKS_PER_ZONE)
+				//pydiv(blocks.z, cube::BLOCKS_PER_ZONE)
 			);
 		}
 
@@ -108,6 +117,13 @@ namespace cubewg {
 					}
 
 					cube::GetGame()->PrintMessage(feedback.c_str());
+				}
+
+				if (allpos) {
+					LongVector2 zonePos = ZoneFromBlock(position);
+
+					float h = cube::GetGame()->world->GetZoneStructureHeight(zonePos.x, zonePos.y);
+					cube::GetGame()->PrintMessage((L"ZoneHeight: " + std::to_wstring(h) + L"\n").c_str());
 				}
 
 				return 1;

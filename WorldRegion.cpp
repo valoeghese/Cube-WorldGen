@@ -163,7 +163,7 @@ namespace cubewg {
 		std::unordered_map<std::wstring, Structure*>::iterator iterator = named_structures->find(structure);
 
 		if (iterator == named_structures->end()) {
-			cube::GetGame()->PrintMessage((L"Unknown Structure " + structure).c_str());
+			cube::GetGame()->PrintMessage((L"Unknown Structure " + structure + L"\n").c_str());
 			return 0;
 		}
 
@@ -297,6 +297,16 @@ namespace cubewg {
 		return field->base_z;
 	}
 
+	cube::Zone* WorldRegion::GetZone(LongVector2 block_pos) {
+		if (this->world) {
+			IntVector2 zone_pos = cube::Zone::ZoneCoordsFromBlocks(block_pos.x, block_pos.y);
+			return this->world->GetZone(zone_pos);
+		}
+		else {
+			return this->zone;
+		}
+	}
+
 	int WorldRegion::GetHeight(LongVector2 block_pos, const Heightmap heightmap) {
 		cube::Zone* zone;
 		IntVector2 local_block_pos;
@@ -323,12 +333,12 @@ namespace cubewg {
 
 		switch (heightmap) {
 		case Heightmap::WORLD_SURFACE:
-			// First block with air above it is world surface.
+			// First block with air/plant above it is world surface.
 			// Start at 1 as cannot return below base_z
 			for (int zo = 1; zo < 64; zo++) {
 				blocc = zone->GetBlock(IntVector3(local_block_pos.x, local_block_pos.y, base_z + zo));
 
-				if (!blocc || blocc->type == cube::Block::Air) {
+				if (!blocc || blocc->type == cube::Block::Air || blocc->type == cube::Block::Leaves) {
 					return base_z + zo - 1;
 				}
 			}
