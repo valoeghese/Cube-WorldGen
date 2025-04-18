@@ -49,14 +49,13 @@ bool cubewg::City::Generate(WorldRegion& region, const IntVector2& zone_position
 		for (int y = 0; y < cube::BLOCKS_PER_ZONE; y++) {
 			double sqr_dist_2_city_centre = cities_grid.SqrDist2Nearest((zone_position.x * cube::BLOCKS_PER_ZONE + x), (zone_position.y * cube::BLOCKS_PER_ZONE + y));
 
+			int field_index = x * cube::BLOCKS_PER_ZONE + y;
+			cube::Field* field = &zone->fields[field_index];
+			bool sea = field->base_z < -1;
+
 			if (sqr_dist_2_city_centre < SQR_CITY_WALL_RADIUS) {
-				int field_index = x * cube::BLOCKS_PER_ZONE + y;
-				cube::Field* field = &zone->fields[field_index];
 				field->base_z = flattened_height;
 			} else if (sqr_dist_2_city_centre < SQR_CITY_SHAPE_RADIUS) {
-				int field_index = x * cube::BLOCKS_PER_ZONE + y;
-				cube::Field* field = &zone->fields[field_index];
-
 				float prog = sqrtf((sqr_dist_2_city_centre - SQR_CITY_WALL_RADIUS) / (SQR_CITY_SHAPE_RADIUS - SQR_CITY_WALL_RADIUS));
 				int interpolated_height = (int)(flattened_height + prog * (field->base_z - flattened_height));
 				field->base_z = interpolated_height;
@@ -64,9 +63,18 @@ bool cubewg::City::Generate(WorldRegion& region, const IntVector2& zone_position
 
 			// remove junk
 			if (sqr_dist_2_city_centre < SQR_CITY_WALL_RADIUS) {
-				int field_index = x * cube::BLOCKS_PER_ZONE + y;
-				cube::Field* field = &zone->fields[field_index];
-				field->blocks.clear();
+				cube::Block* b = zone->GetBlock(IntVector3(x, y, field->base_z));
+				cube::Block base = BlockOf(b->red, b->green, b->blue, b->type);
+				
+				if (!sea && b && b->type == b->Water) {
+					field->blocks.clear();
+					region.SetBlock(LongVector3(x, y, field->base_z), base, to_remesh);
+					region.SetBlock(LongVector3(x, y, 1 + field->base_z), base, to_remesh);
+				}
+				//
+				else {
+					field->blocks.clear();
+				}
 			}
 		}
 	}
@@ -82,8 +90,16 @@ bool cubewg::City::Generate(WorldRegion& region, const IntVector2& zone_position
 				const int wall_height = (sqr_dist_2_city_centre <= 314 * 314 && sqr_dist_2_city_centre >= 284 * 284) ? 11 : 14;
 
 				if (height != kNoPosition) {
+					int zo = 0;
+					// make space for rivers
+					int field_index = x * cube::BLOCKS_PER_ZONE + y;
+					cube::Field* field = &zone->fields[field_index];
+					if (!field->blocks.empty()) {
+						zo = 6; // not empty = water block
+					}
+
 					// TODO account for lava and trees
-					for (int zo = 0; zo < wall_height; zo++) {
+					for (; zo < wall_height; zo++) {
 						region.SetBlock(LongVector3(x, y, height + zo), city_wall, to_remesh);
 					}
 				}
