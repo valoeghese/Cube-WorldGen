@@ -1,8 +1,7 @@
 #include "WorldRegion.h"
 
-#include <mutex>
 #include <list>
-#include <Windows.h>
+#include "CWSDK/cwsdk.h"
 
 #define NULLABLE
 
@@ -75,7 +74,6 @@ namespace cubewg {
 
 	// Map from the owner zone to buffers to paste in neighbouring regions
 	std::unordered_map<IntVector2, NeighbourBuffers>* zoneBuffers;
-	std::recursive_mutex *mut;
 
 	// internal header stuff
 	void SetBlockInZone(cube::Zone *zone, IntVector3 local_block_pos, cube::Block block, std::set<cube::Zone*> &to_remesh);
@@ -85,7 +83,6 @@ namespace cubewg {
 		zoneBuffers = new std::unordered_map<IntVector2, NeighbourBuffers>;
 		structures = new std::list<Structure*>;
 		named_structures = new std::unordered_map<std::wstring, Structure*>;
-		mut = new std::recursive_mutex;
 	}
 
 	// Cleans up the memory here
@@ -100,21 +97,24 @@ namespace cubewg {
 	void WorldRegion::CleanUpBuffers(IntVector2 zone_pos) {
 		if (!zoneBuffers) return;
 
-		// Lock mutex (Causes crash?)
-		mut->lock();
-		mut->unlock();
+		// Lock mutex
+		EnterCriticalSection(&cube::GetGame()->world->zones_critical_section);
 
 		std::unordered_map<IntVector2, NeighbourBuffers>::iterator bufs = zoneBuffers->find(zone_pos);
 		
 		if (bufs != zoneBuffers->end()) {
 			zoneBuffers->erase(zone_pos);  // The unique_ptrs in NeighbourBuffers will be automatically cleaned up when erased
 		}
+
+		// Unlock Mutex
+		LeaveCriticalSection(&cube::GetGame()->world->zones_critical_section);
 	}
 
 	void WorldRegion::GenerateInZone(cube::Zone* zone, std::set<cube::Zone*>& to_remesh) {
 		if (!zoneBuffers) return;
 
-		//mut.lock(); // lock
+		// Lock mutex
+		EnterCriticalSection(&cube::GetGame()->world->zones_critical_section);
 
 		int base_x = zone->position.x;
 		int base_y = zone->position.y;
@@ -148,7 +148,8 @@ namespace cubewg {
 			}
 		}
 
-		//mut->unlock();
+		// Unlock Mutex
+		LeaveCriticalSection(&cube::GetGame()->world->zones_critical_section);
 
 		WorldRegion region(zone);
 
@@ -159,16 +160,16 @@ namespace cubewg {
 
 	int WorldRegion::GenerateStructureAt(std::wstring structure, const LongVector3 & position, std::set<cube::Zone*>& to_remesh)
 	{
-		Structure* structure_obj = named_structures->at(structure);
+		std::unordered_map<std::wstring, Structure*>::iterator iterator = named_structures->find(structure);
 
-		if (!structure_obj) {
+		if (iterator == named_structures->end()) {
 			cube::GetGame()->PrintMessage((L"Unknown Structure " + structure).c_str());
 			return 0;
 		}
 
 		WorldRegion region(cube::GetGame()->world);
 		
-		return structure_obj->GenerateAt(region, IntVector3(position.x, position.y, position.z), to_remesh);
+		return iterator->second->GenerateAt(region, IntVector3(position.x, position.y, position.z), to_remesh);
 	}
 
 	// Helper Functions for Buffers
@@ -414,17 +415,20 @@ namespace cubewg {
 				SetBlockInZone(this->zone, AsLocalBlockPos(block_pos), block, to_remesh);
 			}
 			else {
-				/*IntVector2 zone_pos = this->zone->position;
-				mut.lock();
+				IntVector2 zone_pos = this->zone->position;
+				// Lock Mutex
+				EnterCriticalSection(&cube::GetGame()->world->zones_critical_section);
 				cube::Zone* zone = this->zone->world->GetZone(zone_pos.x + dx, zone_pos.y + dy);
 
 				if (zone) {
-					mut.unlock();
 					SetBlockInZone(zone, ToLocalBlockPos(block_pos), block, to_remesh);
-				} else {
+				}
+				else {
 					SetBlockInBuffer(this->zone, dx, dy, ToLocalBlockPos(block_pos), block);
-					mut.unlock();
-				}*/
+				}
+
+				// Unlock Mutex
+				LeaveCriticalSection(&cube::GetGame()->world->zones_critical_section);
 			}
 		}
 	}

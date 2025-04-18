@@ -30,12 +30,12 @@ namespace cubewg {
 		virtual int OnChat(std::wstring* message) override {
 			bool allpos = *message == L".pos";
 
-			if (message->substr(0, 9) == L".generate") {
+			if (message->substr(0, 10) == L".generate ") {
 				try {
 					LongVector3 playerPos = BlockFromDots(cube::GetGame()->GetPlayer()->entity_data.position);
 					std::set<cube::Zone*> chunks_to_remesh;
 
-					int feedback = WorldRegion::GenerateStructureAt(message->substr(9), playerPos, chunks_to_remesh);
+					int feedback = WorldRegion::GenerateStructureAt(message->substr(10), playerPos, chunks_to_remesh);
 
 					if (feedback) {
 						cube::GetGame()->PrintMessage((L"Error Code: " + std::to_wstring(feedback)).c_str());
@@ -130,10 +130,9 @@ namespace cubewg {
 		virtual void Initialize() override {
 			WorldRegion::Initialise();
 
-			if (0) {
-				//City* city = new City;
-				//WorldRegion::AddStructure(L"city", city);
-			}
+			City* city = new City;
+			WorldRegion::AddStructure(L"city", city);
+
 			return;
 		}
 
