@@ -39,7 +39,7 @@ namespace cubewg {
 		virtual int OnChat(std::wstring* message) override {
 			bool allpos = *message == L".pos";
 
-			if (*message == L".test0") {
+			/*if (*message == L".test0") {
 				cube::GetGame()->world->field_388.clear();
 				cube::GetGame()->PrintMessage(L"Cleared field 388\n");
 				return 1;
@@ -67,7 +67,7 @@ namespace cubewg {
 				cube::GetGame()->PrintMessage(L"Cleared unk_vectors\n");
 				return 1;
 			}
-			else
+			else*/
 			if (message->substr(0, 10) == L".generate ") {
 				try {
 					LongVector3 playerPos = BlockFromDots(cube::GetGame()->GetPlayer()->entity_data.position);
@@ -184,10 +184,6 @@ namespace cubewg {
 		/* Function hook that gets called when a Zone is generated.
 		*/
 		virtual void OnZoneGenerated(cube::Zone* zone) override {
-			if (1) {
-				
-				return;
-			}
 			WorldRegion region = WorldRegion(zone);
 
 			std::set<cube::Zone*> to_remesh;
