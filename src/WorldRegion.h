@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CWSDK/cwsdk.h"
+#include <cwsdk.h>
 
 #include "Structure.h"
 

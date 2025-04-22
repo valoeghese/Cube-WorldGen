@@ -1,7 +1,7 @@
 #include "WorldRegion.h"
 
 #include <list>
-#include "CWSDK/cwsdk.h"
+#include <cwsdk.h>
 
 #define NULLABLE
 
@@ -450,6 +450,7 @@ namespace cubewg {
 		result.blue = b;
 		result.type = type;
 		result.breakable = breakable;
+		//result.field_3 = 0x11CC;
 		return result; // yeah this copies the entire struct but does it really matter
 	}
 }

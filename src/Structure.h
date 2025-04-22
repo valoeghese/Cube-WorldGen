@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CWSDK/cwsdk.h"
+#include <cwsdk.h>
 
 namespace cubewg {
 	// prevent mutual inclusion of headers
