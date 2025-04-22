@@ -4,6 +4,7 @@
 #include "src/WorldRegion.h"
 #include "src/JitteredGrid.h"
 #include "src/City.h"
+#include "src/hooks/WorldGenHooks.h"
 
 #define LF L"\n";
 
@@ -173,6 +174,8 @@ namespace cubewg {
 		 * @return	{void}
 		*/
 		virtual void Initialize() override {
+			SetupOverwriteWorldgen();
+
 			WorldRegion::Initialise();
 
 			City* city = new City;
@@ -184,7 +187,7 @@ namespace cubewg {
 		/* Function hook that gets called when a Zone is generated.
 		*/
 		virtual void OnZoneGenerated(cube::Zone* zone) override {
-			//if (1) return;
+			if (1) return;
 			WorldRegion region = WorldRegion(zone);
 
 			std::set<cube::Zone*> to_remesh;

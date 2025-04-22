@@ -13,5 +13,5 @@ add_library (NewAdventures SHARED
 	"src/City.cpp"
 	"src/DebugTree.h"
 	"src/DebugTree.cpp"
-  )
+    "src/hooks/WorldGenHooks.h")
 target_link_libraries (NewAdventures LINK_PUBLIC CWSDK)
