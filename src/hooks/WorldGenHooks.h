@@ -57,5 +57,5 @@ void SetupOverwriteWorldgen() {
 	char* base = (char*)CWBase();
 	//WriteFarJMP(base + 0x2B4320, (void*)NewOverwriteWorldgen);
 	//WriteFarJMP(base + 0x35EA0, (void*)NewWorldGetZoneStructureHeight);
-	WriteFarJMP(base + 0x36160, (void*)NewOverwriteWorldgen2);
+	WriteFarJMP(base + 0x36210, (void*)NewOverwriteWorldgen2);
 }
