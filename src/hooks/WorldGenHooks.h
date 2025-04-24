@@ -36,9 +36,11 @@ extern "C" float  __fastcall NewOverwriteWorldgen(
 {
 	return 1.0;
 }
-extern "C" __int64 __fastcall NewCategoriesBasedOnD100(int a1)
-{
-	return 15;
+__attribute__((naked)) void ASMOverrideASB() {
+	asm(".intel_syntax \n"
+		"mov eax, 5;\n"
+		"ret\n"
+		".att_syntax \n");
 }
 /*extern "C" float __cdecl NewWorldGetZoneStructureHeight(cube::World* world, int x, int y) {
 	return 80.0f;
@@ -48,5 +50,5 @@ void SetupOverwriteWorldgen() {
 	char* base = (char*)CWBase();
 	//WriteFarJMP(base + 0x2B4320, (void*)NewOverwriteWorldgen);
 	//WriteFarJMP(base + 0x35EA0, (void*)NewWorldGetZoneStructureHeight);
-	WriteFarJMP(base + 0x25F540, (void*)NewCategoriesBasedOnD100);
+	WriteFarJMP(base + 0x2AB0A0, (void*)ASMOverrideASB);
 }
